@@ -1,0 +1,20 @@
+<<<<<<< HEAD
+# jadwal_sholat_app_final
+=======
+# jadwal_sholat_app
+>>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
+
+A new Flutter project.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
