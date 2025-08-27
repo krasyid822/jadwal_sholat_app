@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,7 @@ import 'error_logger.dart';
 
 /// Service untuk menangani elevasi/ketinggian dengan database wilayah Indonesia
 class ElevationService {
+  /// Ambil elevasi dari Open-Elevation API
   static const String _elevationCacheKey = 'elevation_cache';
   static const String _lastElevationKey = 'last_elevation';
   static const Duration _cacheValidDuration = Duration(days: 7);
@@ -124,8 +126,15 @@ class ElevationService {
         'elevation_accuracy_threshold_m',
       );
 
-      // 1) GPS altitude if altitude value is in expected range
-      if (position.altitude > -1000 && position.altitude < 9000) {
+      // 1) GPS altitude if altitude value is in expected range and actually reported
+      // Some platforms return altitude==0.0 when altitude is not available. Treat
+      // zero (or NaN) as "not reported" to avoid using an invalid 0m elevation.
+      final bool hasReportedAltitude =
+          !position.altitude.isNaN && position.altitude != 0.0;
+
+      if (position.altitude > -1000 &&
+          position.altitude < 9000 &&
+          hasReportedAltitude) {
         final acc = position.accuracy; // horizontal accuracy in meters
         if (accuracyThresholdMeters == null) {
           // No configured threshold: accept GPS altitude directly
@@ -135,7 +144,7 @@ class ElevationService {
             position.altitude,
           );
           debugPrint(
-            'Using GPS altitude (no threshold configured, accuracy ${acc}m): ${position.altitude}m',
+            'Using GPS altitude (reported, no threshold configured, accuracy ${acc}m): ${position.altitude}m',
           );
           return position.altitude;
         } else {
@@ -155,7 +164,12 @@ class ElevationService {
             );
           }
         }
+      } else {
+        debugPrint(
+          'GPS altitude not reported or out-of-range (value: ${position.altitude}), skipping GPS altitude',
+        );
       }
+
 
       // 2) Cached elevation
       final cachedElevation = await _getCachedElevation(
@@ -167,7 +181,22 @@ class ElevationService {
         return cachedElevation;
       }
 
-      // 3) Estimation based on region
+      // 3) Try Open-Elevation API
+      final openElevation = await _getElevationFromOpenElevationApi(
+        position.latitude,
+        position.longitude,
+      );
+      if (openElevation != null && isValidElevation(openElevation)) {
+        await _cacheElevation(
+          position.latitude,
+          position.longitude,
+          openElevation,
+        );
+        debugPrint('Using Open-Elevation API: ${openElevation}m');
+        return openElevation;
+      }
+
+      // 4) Estimation based on region
       final estimatedElevation = _estimateElevationByRegion(
         position.latitude,
         position.longitude,
@@ -330,6 +359,11 @@ class ElevationService {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_elevation_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Elevation cache disabled by settings, skipping cache write');
+        return;
+      }
       final cacheKey =
           '${latitude.toStringAsFixed(3)}_${longitude.toStringAsFixed(3)}';
 
@@ -357,6 +391,11 @@ class ElevationService {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_elevation_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Elevation cache disabled by settings, skipping cache read');
+        return null;
+      }
       final cacheKey =
           '${latitude.toStringAsFixed(3)}_${longitude.toStringAsFixed(3)}';
       final cacheJson = prefs.getString('${_elevationCacheKey}_$cacheKey');
@@ -383,8 +422,10 @@ class ElevationService {
   /// Ambil elevasi terakhir yang diketahui
   static Future<double> _getLastKnownElevation() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getDouble(_lastElevationKey) ?? 0.0;
+  final prefs = await SharedPreferences.getInstance();
+  final enabled = prefs.getBool('enable_elevation_cache') ?? false;
+  if (!enabled) return 0.0;
+  return prefs.getDouble(_lastElevationKey) ?? 0.0;
     } catch (e) {
       debugPrint('Failed to get last known elevation: $e');
       return 0.0;
@@ -428,5 +469,27 @@ class ElevationService {
     } else {
       return 'Pegunungan Tinggi (${elevation.toStringAsFixed(0)}m)';
     }
+  }
+
+  static Future<double?> _getElevationFromOpenElevationApi(double latitude, double longitude) async {
+    try {
+      final url = Uri.parse('https://api.open-elevation.com/api/v1/lookup?locations=$latitude,$longitude');
+      final response = await http.get(url).timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['results'] is List && data['results'].isNotEmpty) {
+          final result = data['results'][0];
+          final elevation = result['elevation'];
+          if (elevation is num) {
+            return elevation.toDouble();
+          }
+        }
+      } else {
+        debugPrint('Open-Elevation API error: {response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Open-Elevation API failed: $e');
+    }
+    return null;
   }
 }

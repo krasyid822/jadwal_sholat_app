@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -29,7 +30,9 @@ class LocationService {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       // Coba gunakan cached location jika layanan GPS dimatikan
-      final cachedPosition = await getCachedLocation();
+  final prefs = await SharedPreferences.getInstance();
+  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+  final cachedPosition = cacheEnabled ? await getCachedLocation() : null;
       if (cachedPosition != null) {
         return cachedPosition;
       }
@@ -66,8 +69,12 @@ class LocationService {
         locationSettings: locationSettings,
       );
 
-      // Simpan posisi ke cache
-      await _savePositionData(position);
+      // Simpan posisi ke cache (jika cache diizinkan)
+      final prefs = await SharedPreferences.getInstance();
+      final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+      if (cacheEnabled) {
+        await _savePositionData(position);
+      }
 
       return position;
     } catch (e) {
@@ -120,7 +127,9 @@ class LocationService {
 
   /// Ambil lokasi dari cache jika masih valid
   static Future<Position?> getCachedLocation() async {
-    final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
+  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+  if (!cacheEnabled) return null;
 
     final locationStr = prefs.getString(_lastLocationKey);
     final timestamp = prefs.getInt(_locationTimestampKey);
@@ -164,9 +173,11 @@ class LocationService {
 
   /// Ambil placemark dari cache
   static Future<Placemark?> getCachedPlacemark() async {
-    final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
+  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+  if (!cacheEnabled) return null;
 
-    final placemarkStr = prefs.getString(_lastPlacemarkKey);
+  final placemarkStr = prefs.getString(_lastPlacemarkKey);
     if (placemarkStr == null) {
       return null;
     }
@@ -199,6 +210,12 @@ class LocationService {
   /// Clear cache lokasi
   static Future<void> clearLocationCache() async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+    if (!cacheEnabled) {
+      debugPrint('Location cache disabled by settings, skipping clear');
+      return;
+    }
+
     await prefs.remove(_lastLocationKey);
     await prefs.remove(_lastPlacemarkKey);
     await prefs.remove(_locationTimestampKey);
@@ -207,6 +224,8 @@ class LocationService {
   /// Private method untuk menyimpan posisi akurat
   static Future<void> _savePositionData(Position position) async {
     final prefs = await SharedPreferences.getInstance();
+    final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+    if (!cacheEnabled) return;
 
     await prefs.setDouble(_latitudeKey, position.latitude);
     await prefs.setDouble(_longitudeKey, position.longitude);
@@ -219,7 +238,9 @@ class LocationService {
 
   /// Private method untuk mendapatkan posisi tersimpan
   static Future<Position?> _getStoredPosition() async {
-    final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
+  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+  if (!cacheEnabled) return null;
 
     final latitude = prefs.getDouble(_latitudeKey);
     final longitude = prefs.getDouble(_longitudeKey);

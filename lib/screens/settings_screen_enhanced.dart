@@ -21,6 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoPlayAdhanAudio = true; // New: Auto-play adhan audio
   bool _useNativeRingtonePlayback = true;
   bool _enableWatchdogRestart = true;
+  bool _enableLocationCache = false;
+  bool _enableElevationCache = false;
   bool _isLoading = false;
 
   @override
@@ -43,6 +45,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback =
           prefs.getBool('use_native_ringtone_playback') ?? true;
       _enableWatchdogRestart = prefs.getBool('enable_watchdog_restart') ?? true;
+  _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
+  _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
     });
   }
 
@@ -59,6 +63,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback,
     );
     await prefs.setBool('enable_watchdog_restart', _enableWatchdogRestart);
+  await prefs.setBool('enable_location_cache', _enableLocationCache);
+  await prefs.setBool('enable_elevation_cache', _enableElevationCache);
   }
 
   Future<void> _testEnhancedNotification() async {
@@ -327,6 +333,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     activeThumbColor: const Color(0xFF4DB6AC),
                     onChanged: (value) {
                       setState(() => _autoLocationRefresh = value);
+                      _saveSettings();
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text(
+                      'Enable Location Cache',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Simpan lokasi terakhir untuk fallback jika GPS tidak tersedia',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: _enableLocationCache,
+                    activeThumbColor: const Color(0xFF4DB6AC),
+                    onChanged: (value) {
+                      setState(() => _enableLocationCache = value);
+                      _saveSettings();
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text(
+                      'Enable Elevation Cache',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Simpan elevasi terakhir untuk digunakan sebagai fallback',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: _enableElevationCache,
+                    activeThumbColor: const Color(0xFF4DB6AC),
+                    onChanged: (value) {
+                      setState(() => _enableElevationCache = value);
                       _saveSettings();
                     },
                   ),

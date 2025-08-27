@@ -17,6 +17,11 @@ class LocationCacheService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_location_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Location cache disabled by settings, skipping cache write');
+        return;
+      }
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
       // Cache position
@@ -63,6 +68,11 @@ class LocationCacheService {
   static Future<Map<String, dynamic>?> getCachedLocation() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_location_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Location cache disabled by settings, skipping cache read');
+        return null;
+      }
 
       final positionJson = prefs.getString(_cacheKeyPosition);
       final placemarkJson = prefs.getString(_cacheKeyPlacemark);
@@ -125,7 +135,11 @@ class LocationCacheService {
   /// Cek apakah cache masih valid (kurang dari maxAgeHours jam)
   static Future<bool> isCacheValid({double maxAgeHours = 24.0}) async {
     try {
-      final cached = await getCachedLocation();
+  final prefs = await SharedPreferences.getInstance();
+  final enabled = prefs.getBool('enable_location_cache') ?? false;
+  if (!enabled) return false;
+
+  final cached = await getCachedLocation();
       if (cached == null) return false;
 
       final cacheAgeHours = cached['cache_age_hours'] as double;
@@ -140,6 +154,11 @@ class LocationCacheService {
   static Future<void> clearCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_location_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Location cache disabled by settings, skipping clear');
+        return;
+      }
       await prefs.remove(_cacheKeyPosition);
       await prefs.remove(_cacheKeyPlacemark);
       await prefs.remove(_cacheKeyTimestamp);
@@ -180,6 +199,12 @@ Cached Location Summary:
   /// Force refresh cache dengan lokasi baru
   static Future<void> forceRefreshCache() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_location_cache') ?? false;
+      if (!enabled) {
+        debugPrint('Location cache disabled by settings, skipping force refresh');
+        return;
+      }
       await clearCache();
 
       // Ambil lokasi baru
