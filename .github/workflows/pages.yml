@@ -1,0 +1,28 @@
+# .github/workflows/pages.yml
+name: Deploy Pages (static folder)
+
+on:
+  push:
+    branches: [ main-new ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Jika folder build/web sudah berisi site statis (index.html, assets), langsung deploy
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./build/web
+          # cname: contoh.domain.com  # optional, jika pakai custom domain
