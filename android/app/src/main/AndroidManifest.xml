@@ -90,6 +90,16 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- App Widget provider for home screen widget -->
+        <receiver android:name="jadwalsholat.rasyid.PrayerWidgetProvider"
+                  android:label="Jadwal Sholat Widget"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
+        </receiver>
         
         <!-- Notification service for background scheduling -->
         <receiver 

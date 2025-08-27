@@ -22,7 +22,23 @@ object AndroidAudioHelper {
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build()
             )
-            mediaPlayer?.isLooping = true
+                    // Respect loop setting stored in Android SharedPreferences.
+                    // Flutter side saves boolean 'loop_adhan_audio' (default false).
+                    try {
+                        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                        // Flutter stores values with key style: "flutter." + actualKey
+                        val stored = prefs.getString("flutter.loop_adhan_audio", null)
+                        val loop = when (stored) {
+                            null -> false
+                            "true" -> true
+                            "false" -> false
+                            else -> false
+                        }
+                        mediaPlayer?.isLooping = loop
+                    } catch (e: Exception) {
+                        // Fallback: don't loop
+                        mediaPlayer?.isLooping = false
+                    }
             mediaPlayer?.prepare()
             mediaPlayer?.start()
         } catch (e: IOException) {
@@ -48,7 +64,19 @@ object AndroidAudioHelper {
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build()
             )
-            mediaPlayer?.isLooping = true
+            try {
+                val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                val stored = prefs.getString("flutter.loop_adhan_audio", null)
+                val loop = when (stored) {
+                    null -> false
+                    "true" -> true
+                    "false" -> false
+                    else -> false
+                }
+                mediaPlayer?.isLooping = loop
+            } catch (e: Exception) {
+                mediaPlayer?.isLooping = false
+            }
             mediaPlayer?.prepare()
             mediaPlayer?.start()
         } catch (e: IOException) {

@@ -708,6 +708,36 @@ class NotificationServiceEnhanced {
     }
   }
 
+  /// Returns whether adhan audio is currently playing
+  static Future<bool> isAdhanPlaying() async {
+    try {
+      return _audioPlayer.state == PlayerState.playing;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Set whether adhan audio should loop when played. Persisted in SharedPreferences.
+  static Future<void> setAdhanLooping(bool looping) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('loop_adhan_audio', looping);
+      try {
+        await _audioPlayer.setReleaseMode(looping ? ReleaseMode.loop : ReleaseMode.release);
+      } catch (e) {
+        debugPrint('setAdhanLooping: setReleaseMode failed: $e');
+      }
+    } catch (e) {
+      debugPrint('Error saving loop_adhan_audio preference: $e');
+    }
+  }
+
+  /// Read loop preference
+  static Future<bool> isAdhanLoopingEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('loop_adhan_audio') ?? false;
+  }
+
   /// Play audio adzan penuh dengan auto-start
   static Future<void> playFullAdhanAudio(String prayerName) async {
     try {

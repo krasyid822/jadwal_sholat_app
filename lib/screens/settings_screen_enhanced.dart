@@ -23,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _enableWatchdogRestart = true;
   bool _enableLocationCache = false;
   bool _enableElevationCache = false;
+  bool _loopAdhanAudio = false;
   bool _isLoading = false;
 
   @override
@@ -47,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _enableWatchdogRestart = prefs.getBool('enable_watchdog_restart') ?? true;
   _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
   _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
+  _loopAdhanAudio = prefs.getBool('loop_adhan_audio') ?? false;
     });
   }
 
@@ -65,6 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('enable_watchdog_restart', _enableWatchdogRestart);
   await prefs.setBool('enable_location_cache', _enableLocationCache);
   await prefs.setBool('enable_elevation_cache', _enableElevationCache);
+  await prefs.setBool('loop_adhan_audio', _loopAdhanAudio);
   }
 
   Future<void> _testEnhancedNotification() async {
@@ -381,6 +384,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     activeThumbColor: const Color(0xFF4DB6AC),
                     onChanged: (value) {
                       setState(() => _useNativeRingtonePlayback = value);
+                      _saveSettings();
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text(
+                      'Loop Audio Azan',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Putar audio azan secara berulang (loop). Default: mati',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: _loopAdhanAudio,
+                    activeThumbColor: const Color(0xFF4DB6AC),
+                    onChanged: (value) async {
+                      setState(() => _loopAdhanAudio = value);
+                      await NotificationServiceEnhanced.setAdhanLooping(value);
                       _saveSettings();
                     },
                   ),

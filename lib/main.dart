@@ -20,6 +20,7 @@ import 'package:jadwal_sholat_app/utils/prayer_calculation_utils.dart';
 import 'package:jadwal_sholat_app/utils/prayer_time_formatter.dart';
 import 'package:jadwal_sholat_app/config/environment_config.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:jadwal_sholat_app/utils/route_observer.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// Get local timezone name
@@ -206,7 +207,8 @@ class JadwalSholatApp extends StatelessWidget {
           color: Color(0xFF4DB6AC),
         ),
       ),
-      home: const HomeScreen(),
+  navigatorObservers: [appRouteObserver],
+  home: const HomeScreen(),
     );
   }
 }

@@ -10,6 +10,8 @@ import 'package:jadwal_sholat_app/screens/qibla_screen.dart';
 import 'package:jadwal_sholat_app/screens/settings_screen_enhanced.dart';
 import 'package:jadwal_sholat_app/services/location_service.dart';
 import 'package:jadwal_sholat_app/services/notification_service_enhanced.dart';
+import 'package:jadwal_sholat_app/utils/route_observer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +20,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   PrayerTimes? _prayerTimes;
   Placemark? _placemark;
   Position? _position;
@@ -32,6 +34,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadPrayerTimes();
+    // check after first frame if adhan audio is playing
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowStopAdhanDialog());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    appRouteObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when returning to this route (e.g., from Settings). Re-check audio state.
+    _maybeShowStopAdhanDialog();
   }
 
   Future<void> _loadPrayerTimes() async {
@@ -64,6 +87,25 @@ class _HomeScreenState extends State<HomeScreen> {
         _prayerTimes = prayerTimes;
         _isLoading = false;
       });
+
+      // Save simple values for the Android launcher widget to read via platform prefs
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final placeName = _placemark != null
+            ? (_placemark!.subLocality?.isNotEmpty == true ? _placemark!.subLocality : _placemark!.locality)
+            : 'Lokasi tidak diketahui';
+        await prefs.setString('last_place_name', placeName ?? 'Lokasi tidak diketahui');
+        // next prayer info
+        final nextPrayerEnum = _prayerTimes!.nextPrayer();
+        final nextPrayerName = _prayerName(nextPrayerEnum);
+        final nextPrayerTime = _prayerTimes!.timeForPrayer(nextPrayerEnum);
+        if (nextPrayerTime != null) {
+          await prefs.setString('next_prayer_name', nextPrayerName);
+          await prefs.setString('next_prayer_time', DateTime.now().isUtc ? nextPrayerTime.toIso8601String() : nextPrayerTime.toString().substring(11,16));
+        }
+      } catch (_) {
+        // ignore prefs errors for widget
+      }
 
       _startTimer();
       // Menjadwalkan notifikasi harian setelah waktu sholat berhasil didapatkan
@@ -151,11 +193,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -314,6 +351,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Final fallback
     return 'Lokasi tidak diketahui';
+  }
+
+  Future<void> _maybeShowStopAdhanDialog() async {
+    try {
+      final isPlaying = await NotificationServiceEnhanced.isAdhanPlaying();
+      if (!isPlaying) return;
+
+      // If there's already a dialog open, don't open another
+      if (!mounted) return;
+
+      final stop = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Audio Azan Sedang Diputar'),
+            content: const Text('Apakah Anda ingin menghentikan audio azan yang sedang diputar?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Biarkan'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Hentikan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (stop == true) {
+        await NotificationServiceEnhanced.stopAdhanAudio();
+      }
+    } catch (e) {
+      // ignore errors silently
+    }
   }
 
   Widget _buildCountdownCard() {
