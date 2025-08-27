@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Text(
-              '${_placemark?.subAdministrativeArea ?? 'Lokasi tidak diketahui'}, ${_placemark?.country ?? ''}',
+              _formatLocationDisplay(),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
@@ -292,6 +292,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  String _formatLocationDisplay() {
+    // Prefer human-readable placemark parts when available
+    if (_placemark != null) {
+      final parts = <String>[];
+      if ((_placemark!.subLocality ?? '').isNotEmpty) parts.add(_placemark!.subLocality!);
+      if ((_placemark!.locality ?? '').isNotEmpty && !parts.contains(_placemark!.locality)) parts.add(_placemark!.locality!);
+      if ((_placemark!.subAdministrativeArea ?? '').isNotEmpty && !parts.contains(_placemark!.subAdministrativeArea)) parts.add(_placemark!.subAdministrativeArea!);
+      if ((_placemark!.administrativeArea ?? '').isNotEmpty && !parts.contains(_placemark!.administrativeArea)) parts.add(_placemark!.administrativeArea!);
+      if ((_placemark!.country ?? '').isNotEmpty) parts.add(_placemark!.country!);
+
+      if (parts.isNotEmpty) return parts.join(', ');
+    }
+
+    // If no placemark, fall back to coordinates if available
+    if (_position != null) {
+      return 'Koordinat ${_position!.latitude.toStringAsFixed(4)}, ${_position!.longitude.toStringAsFixed(4)}';
+    }
+
+    // Final fallback
+    return 'Lokasi tidak diketahui';
   }
 
   Widget _buildCountdownCard() {

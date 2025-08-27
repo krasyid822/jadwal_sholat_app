@@ -24,17 +24,3 @@ plugins {
 }
 
 include(":app")
-<<<<<<< HEAD
-=======
-
-// HAPUS KODE LAMA DAN GANTI DENGAN YANG INI
-gradle.afterProject {
-    if (name == "flutter_local_notifications") {
-        tasks.configureEach {
-            if (name.contains("test", ignoreCase = true) || name.contains("lint", ignoreCase = true)) {
-                enabled = false
-            }
-        }
-    }
-}
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2

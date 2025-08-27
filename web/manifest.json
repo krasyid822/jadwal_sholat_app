@@ -1,11 +1,6 @@
 {
-<<<<<<< HEAD
     "name": "jadwal_sholat_app_final",
     "short_name": "jadwal_sholat_app_final",
-=======
-    "name": "jadwal_sholat_app",
-    "short_name": "jadwal_sholat_app",
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

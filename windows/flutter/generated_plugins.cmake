@@ -3,7 +3,6 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-<<<<<<< HEAD
   audioplayers_windows
   geolocator_windows
   permission_handler_windows
@@ -13,12 +12,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   flutter_local_notifications_windows
-=======
-  geolocator_windows
-)
-
-list(APPEND FLUTTER_FFI_PLUGIN_LIST
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

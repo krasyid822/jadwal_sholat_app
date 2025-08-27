@@ -90,21 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-<<<<<<< HEAD
             VALUE "FileDescription", "jadwal_sholat_app_final" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "jadwal_sholat_app_final" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "jadwal_sholat_app_final.exe" "\0"
             VALUE "ProductName", "jadwal_sholat_app_final" "\0"
-=======
-            VALUE "FileDescription", "jadwal_sholat_app" "\0"
-            VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "jadwal_sholat_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "jadwal_sholat_app.exe" "\0"
-            VALUE "ProductName", "jadwal_sholat_app" "\0"
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

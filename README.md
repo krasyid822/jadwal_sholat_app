@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # jadwal_sholat_app_final
-=======
-# jadwal_sholat_app
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
 
 A new Flutter project.
 

@@ -27,11 +27,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-<<<<<<< HEAD
   if (!window.Create(L"jadwal_sholat_app_final", origin, size)) {
-=======
-  if (!window.Create(L"jadwal_sholat_app", origin, size)) {
->>>>>>> ea2dca7892bbabe0ff12dcf370e13c093c8f69d2
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
