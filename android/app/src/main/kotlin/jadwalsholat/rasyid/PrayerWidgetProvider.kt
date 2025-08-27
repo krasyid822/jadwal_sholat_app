@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,28 +37,77 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_prayer)
 
             // Load last known location and next prayer time from SharedPreferences (saved by Flutter code)
-            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            // Candidate SharedPreferences file names to inspect
+            val candidatePrefFiles = listOf("FlutterSharedPreferences", "${context.packageName}_preferences")
 
-            // Try multiple possible keys because the Flutter plugin may store keys with or without the
-            // "flutter." prefix depending on plugin/platform behaviour or older app versions.
-            fun readStringVar(varNames: List<String>, default: String): String {
-                for (k in varNames) {
-                    try {
-                        val v = prefs.getString(k, null)
-                        if (v != null) {
-                            val trimmed = v.trim()
-                            if (trimmed.isNotEmpty() && trimmed.lowercase(Locale.getDefault()) != "null") return trimmed
-                        }
-                    } catch (_: Exception) {
-                        // ignore and try next
-                    }
-                }
-                return default
+            // Keys to look for (both flutter-prefixed and unprefixed)
+            val keyVariants = listOf(
+                listOf("flutter.last_place_name", "last_place_name"),
+                listOf("flutter.next_prayer_name", "next_prayer_name"),
+                listOf("flutter.next_prayer_time", "next_prayer_time")
+            )
+
+            // Helper to extract a string value from a SharedPreferences map, sanitizing empty/null-like values
+            fun sanitize(v: Any?): String? {
+                if (v == null) return null
+                val s = v.toString().trim()
+                if (s.isEmpty()) return null
+                if (s.equals("null", ignoreCase = true)) return null
+                return s
             }
 
-            val place = readStringVar(listOf("flutter.last_place_name", "last_place_name"), "Lokasi tidak diketahui")
-            val nextPrayer = readStringVar(listOf("flutter.next_prayer_name", "next_prayer_name"), "-")
-            val nextPrayerTime = readStringVar(listOf("flutter.next_prayer_time", "next_prayer_time"), "-")
+            var place: String? = null
+            var nextPrayer: String? = null
+            var nextPrayerTime: String? = null
+
+            for (file in candidatePrefFiles) {
+                try {
+                    val p = context.getSharedPreferences(file, Context.MODE_PRIVATE)
+                    val all = p.all
+                    Log.d("PrayerWidget", "Inspecting prefs file=$file, entries=${all.keys}")
+
+                    // If we haven't found place yet, try variants
+                    if (place == null) {
+                        for (k in keyVariants[0]) {
+                            val v = sanitize(all[k])
+                            if (v != null) {
+                                place = v
+                                break
+                            }
+                        }
+                    }
+
+                    if (nextPrayer == null) {
+                        for (k in keyVariants[1]) {
+                            val v = sanitize(all[k])
+                            if (v != null) {
+                                nextPrayer = v
+                                break
+                            }
+                        }
+                    }
+
+                    if (nextPrayerTime == null) {
+                        for (k in keyVariants[2]) {
+                            val v = sanitize(all[k])
+                            if (v != null) {
+                                nextPrayerTime = v
+                                break
+                            }
+                        }
+                    }
+
+                    // If all found, stop searching
+                    if (place != null && nextPrayer != null && nextPrayerTime != null) break
+                } catch (e: Exception) {
+                    Log.w("PrayerWidget", "Error reading prefs file=$file: ${e.message}")
+                }
+            }
+
+            // Final fallbacks
+            val finalPlace = place ?: "Lokasi tidak diketahui"
+            val finalNextPrayer = nextPrayer ?: "-"
+            val finalNextPrayerTime = nextPrayerTime ?: "-"
 
             views.setTextViewText(R.id.widget_place, place)
             views.setTextViewText(R.id.widget_prayer_name, nextPrayer)
