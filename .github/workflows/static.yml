@@ -2,7 +2,7 @@ name: Deploy static content to Pages
 
 on:
   push:
-    branches: ["main-new"]  # Changed from "main-new" to "main" branch
+    branches: ["main-new"]  # Diubah dari "main-new" menjadi "main"
   workflow_dispatch:
 
 permissions:
@@ -34,14 +34,27 @@ jobs:
         
       - name: Build web app in release mode
         run: flutter build web --release --base-href /jadwal_sholat_app/
+        
+      - name: Verify index.html exists and content
+        run: |
+          if [ ! -f build/web/index.html ]; then
+            echo "index.html not found!"
+            exit 1
+          fi
+          echo "Content of index.html:"
+          cat build/web/index.html | head -n 20
 
       - name: Check build output
         run: |
-          if [ ! -d build/web ]; then
-            echo "Web build output not found!"
+          echo "Listing build/web directory:"
+          ls -la build/web
+          echo "Checking for main.dart.js:"
+          if [ -f build/web/main.dart.js ]; then
+            echo "main.dart.js exists"
+          else
+            echo "main.dart.js is missing!"
             exit 1
           fi
-          ls -la build/web
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
