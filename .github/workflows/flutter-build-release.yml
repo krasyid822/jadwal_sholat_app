@@ -2,8 +2,8 @@ name: Flutter Build and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main-new  # Triggers on every push to the main branch
 
 jobs:
   build:
@@ -38,6 +38,16 @@ jobs:
       - name: Run tests
         run: flutter test
       
+      - name: Get commit short SHA
+        id: commit_sha
+        shell: bash
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      
+      - name: Get current date
+        id: date
+        shell: bash
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      
       # Android builds
       - name: Build APK for arm64-v8a
         run: flutter build apk --release --split-per-abi --target-platform android-arm64
@@ -55,8 +65,8 @@ jobs:
       - name: Create Windows 7z Archive
         shell: powershell
         run: |
-          7z a -r windows-build.7z build\windows\runner\Release\*
-          echo "Windows build compressed to windows-build.7z"
+          7z a -r windows-build-${{ env.DATE }}-${{ env.SHORT_SHA }}.7z build\windows\runner\Release\*
+          echo "Windows build compressed"
       
       # Web build
       - name: Build Web
@@ -65,22 +75,23 @@ jobs:
       - name: Create Web 7z Archive
         shell: powershell
         run: |
-          7z a -r web-build.7z build\web\*
-          echo "Web build compressed to web-build.7z"
+          7z a -r web-build-${{ env.DATE }}-${{ env.SHORT_SHA }}.7z build\web\*
+          echo "Web build compressed"
       
-      # Create Release and upload artifacts
+      # Create Release
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release ${{ github.ref_name }}
+          name: Build ${{ env.DATE }}-${{ env.SHORT_SHA }}
+          tag_name: build-${{ env.DATE }}-${{ env.SHORT_SHA }}
           draft: false
           prerelease: false
           files: |
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
             build/app/outputs/flutter-apk/app-x86_64-release.apk
-            windows-build.7z
-            web-build.7z
+            windows-build-${{ env.DATE }}-${{ env.SHORT_SHA }}.7z
+            web-build-${{ env.DATE }}-${{ env.SHORT_SHA }}.7z
