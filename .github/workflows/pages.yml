@@ -3,7 +3,7 @@ name: Deploy Pages (static folder)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main-new ]
   workflow_dispatch:
 
 permissions:
