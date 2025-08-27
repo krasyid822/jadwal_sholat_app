@@ -2,7 +2,7 @@ name: Deploy static content to Pages
 
 on:
   push:
-    branches: ["main-new"]
+    branches: ["main-new"]  # Changed from "main-new" to "main" branch
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,11 @@ jobs:
         with:
           channel: stable
 
-      - name: Build web app
-        run: flutter build web
+      - name: Install dependencies
+        run: flutter pub get
+        
+      - name: Build web app in release mode
+        run: flutter build web --release
 
       - name: Check build output
         run: |
@@ -38,6 +41,7 @@ jobs:
             echo "Web build output not found!"
             exit 1
           fi
+          ls -la build/web
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
