@@ -109,9 +109,9 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             val finalNextPrayer = nextPrayer ?: "-"
             val finalNextPrayerTime = nextPrayerTime ?: "-"
 
-            views.setTextViewText(R.id.widget_place, place)
-            views.setTextViewText(R.id.widget_prayer_name, nextPrayer)
-            views.setTextViewText(R.id.widget_prayer_time, nextPrayerTime)
+            views.setTextViewText(R.id.widget_place, finalPlace)
+            views.setTextViewText(R.id.widget_prayer_name, finalNextPrayer)
+            views.setTextViewText(R.id.widget_prayer_time, finalNextPrayerTime)
 
             // Add a refresh pending intent (tap the widget to refresh)
             val refreshIntent = Intent(context, PrayerWidgetProvider::class.java).apply { action = ACTION_REFRESH }
