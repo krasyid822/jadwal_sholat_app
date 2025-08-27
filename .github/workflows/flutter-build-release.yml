@@ -17,6 +17,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
+          distribution: 'zulu'
           java-version: '21'
       
       - name: Setup Flutter
