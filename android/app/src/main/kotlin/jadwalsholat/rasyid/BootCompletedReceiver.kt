@@ -13,6 +13,12 @@ class BootCompletedReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 android.util.Log.w("BootReceiver", "Failed to schedule watchdog on boot: ${e.message}")
             }
+            // Ensure widget daily update alarm is scheduled after boot
+            try {
+                WidgetUpdateScheduler.scheduleDailyUpdate(context)
+            } catch (e: Exception) {
+                android.util.Log.w("BootReceiver", "Failed to schedule widget update on boot: ${e.message}")
+            }
         }
     }
 }
