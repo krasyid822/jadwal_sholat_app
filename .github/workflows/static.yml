@@ -23,7 +23,7 @@ jobs:
       - name: Build web app in release mode
         run: |
           # Build dengan base-href yang tepat
-          flutter build web --release --web-renderer html --base-href /jadwal_sholat_app/
+          flutter build web --release --base-href /jadwal_sholat_app/
           
       - name: Prepare docs directory
         run: |
