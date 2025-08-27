@@ -33,7 +33,7 @@ jobs:
         run: flutter pub get
         
       - name: Build web app in release mode
-        run: flutter build web --release
+        run: flutter build web --release --base-href /jadwal_sholat_app/
 
       - name: Check build output
         run: |
