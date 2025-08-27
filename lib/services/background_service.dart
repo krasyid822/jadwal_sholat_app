@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:geocoding/geocoding.dart'
+    show placemarkFromCoordinates, Placemark;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
@@ -142,7 +143,10 @@ void onStart(ServiceInstance service) async {
           thoroughfare: null,
           subThoroughfare: null,
         );
-        await LocationCacheService.cacheLocation(position: position, placemark: dummyPlacemark);
+        await LocationCacheService.cacheLocation(
+          position: position,
+          placemark: dummyPlacemark,
+        );
         debugPrint('Cached position only on web');
       }
 

@@ -46,9 +46,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback =
           prefs.getBool('use_native_ringtone_playback') ?? true;
       _enableWatchdogRestart = prefs.getBool('enable_watchdog_restart') ?? true;
-  _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
-  _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
-  _loopAdhanAudio = prefs.getBool('loop_adhan_audio') ?? false;
+      _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
+      _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
+      _loopAdhanAudio = prefs.getBool('loop_adhan_audio') ?? false;
     });
   }
 
@@ -65,9 +65,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback,
     );
     await prefs.setBool('enable_watchdog_restart', _enableWatchdogRestart);
-  await prefs.setBool('enable_location_cache', _enableLocationCache);
-  await prefs.setBool('enable_elevation_cache', _enableElevationCache);
-  await prefs.setBool('loop_adhan_audio', _loopAdhanAudio);
+    await prefs.setBool('enable_location_cache', _enableLocationCache);
+    await prefs.setBool('enable_elevation_cache', _enableElevationCache);
+    await prefs.setBool('loop_adhan_audio', _loopAdhanAudio);
   }
 
   Future<void> _testEnhancedNotification() async {

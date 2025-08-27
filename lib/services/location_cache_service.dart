@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:geocoding/geocoding.dart'
+    show placemarkFromCoordinates, Placemark;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
 class LocationCacheService {
@@ -135,11 +136,11 @@ class LocationCacheService {
   /// Cek apakah cache masih valid (kurang dari maxAgeHours jam)
   static Future<bool> isCacheValid({double maxAgeHours = 24.0}) async {
     try {
-  final prefs = await SharedPreferences.getInstance();
-  final enabled = prefs.getBool('enable_location_cache') ?? false;
-  if (!enabled) return false;
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_location_cache') ?? false;
+      if (!enabled) return false;
 
-  final cached = await getCachedLocation();
+      final cached = await getCachedLocation();
       if (cached == null) return false;
 
       final cacheAgeHours = cached['cache_age_hours'] as double;
@@ -202,7 +203,9 @@ Cached Location Summary:
       final prefs = await SharedPreferences.getInstance();
       final enabled = prefs.getBool('enable_location_cache') ?? false;
       if (!enabled) {
-        debugPrint('Location cache disabled by settings, skipping force refresh');
+        debugPrint(
+          'Location cache disabled by settings, skipping force refresh',
+        );
         return;
       }
       await clearCache();

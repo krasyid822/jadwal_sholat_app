@@ -170,7 +170,6 @@ class ElevationService {
         );
       }
 
-
       // 2) Cached elevation
       final cachedElevation = await _getCachedElevation(
         position.latitude,
@@ -361,7 +360,9 @@ class ElevationService {
       final prefs = await SharedPreferences.getInstance();
       final enabled = prefs.getBool('enable_elevation_cache') ?? false;
       if (!enabled) {
-        debugPrint('Elevation cache disabled by settings, skipping cache write');
+        debugPrint(
+          'Elevation cache disabled by settings, skipping cache write',
+        );
         return;
       }
       final cacheKey =
@@ -422,10 +423,10 @@ class ElevationService {
   /// Ambil elevasi terakhir yang diketahui
   static Future<double> _getLastKnownElevation() async {
     try {
-  final prefs = await SharedPreferences.getInstance();
-  final enabled = prefs.getBool('enable_elevation_cache') ?? false;
-  if (!enabled) return 0.0;
-  return prefs.getDouble(_lastElevationKey) ?? 0.0;
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('enable_elevation_cache') ?? false;
+      if (!enabled) return 0.0;
+      return prefs.getDouble(_lastElevationKey) ?? 0.0;
     } catch (e) {
       debugPrint('Failed to get last known elevation: $e');
       return 0.0;
@@ -471,13 +472,20 @@ class ElevationService {
     }
   }
 
-  static Future<double?> _getElevationFromOpenElevationApi(double latitude, double longitude) async {
+  static Future<double?> _getElevationFromOpenElevationApi(
+    double latitude,
+    double longitude,
+  ) async {
     try {
-      final url = Uri.parse('https://api.open-elevation.com/api/v1/lookup?locations=$latitude,$longitude');
+      final url = Uri.parse(
+        'https://api.open-elevation.com/api/v1/lookup?locations=$latitude,$longitude',
+      );
       final response = await http.get(url).timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data is Map && data['results'] is List && data['results'].isNotEmpty) {
+        if (data is Map &&
+            data['results'] is List &&
+            data['results'].isNotEmpty) {
           final result = data['results'][0];
           final elevation = result['elevation'];
           if (elevation is num) {

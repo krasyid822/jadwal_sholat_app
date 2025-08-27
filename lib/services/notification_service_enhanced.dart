@@ -723,7 +723,9 @@ class NotificationServiceEnhanced {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('loop_adhan_audio', looping);
       try {
-        await _audioPlayer.setReleaseMode(looping ? ReleaseMode.loop : ReleaseMode.release);
+        await _audioPlayer.setReleaseMode(
+          looping ? ReleaseMode.loop : ReleaseMode.release,
+        );
       } catch (e) {
         debugPrint('setAdhanLooping: setReleaseMode failed: $e');
       }

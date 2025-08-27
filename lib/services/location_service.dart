@@ -30,9 +30,9 @@ class LocationService {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       // Coba gunakan cached location jika layanan GPS dimatikan
-  final prefs = await SharedPreferences.getInstance();
-  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
-  final cachedPosition = cacheEnabled ? await getCachedLocation() : null;
+      final prefs = await SharedPreferences.getInstance();
+      final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+      final cachedPosition = cacheEnabled ? await getCachedLocation() : null;
       if (cachedPosition != null) {
         return cachedPosition;
       }
@@ -127,9 +127,9 @@ class LocationService {
 
   /// Ambil lokasi dari cache jika masih valid
   static Future<Position?> getCachedLocation() async {
-  final prefs = await SharedPreferences.getInstance();
-  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
-  if (!cacheEnabled) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+    if (!cacheEnabled) return null;
 
     final locationStr = prefs.getString(_lastLocationKey);
     final timestamp = prefs.getInt(_locationTimestampKey);
@@ -173,11 +173,11 @@ class LocationService {
 
   /// Ambil placemark dari cache
   static Future<Placemark?> getCachedPlacemark() async {
-  final prefs = await SharedPreferences.getInstance();
-  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
-  if (!cacheEnabled) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+    if (!cacheEnabled) return null;
 
-  final placemarkStr = prefs.getString(_lastPlacemarkKey);
+    final placemarkStr = prefs.getString(_lastPlacemarkKey);
     if (placemarkStr == null) {
       return null;
     }
@@ -238,9 +238,9 @@ class LocationService {
 
   /// Private method untuk mendapatkan posisi tersimpan
   static Future<Position?> _getStoredPosition() async {
-  final prefs = await SharedPreferences.getInstance();
-  final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
-  if (!cacheEnabled) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final cacheEnabled = prefs.getBool('enable_location_cache') ?? false;
+    if (!cacheEnabled) return null;
 
     final latitude = prefs.getDouble(_latitudeKey);
     final longitude = prefs.getDouble(_longitudeKey);

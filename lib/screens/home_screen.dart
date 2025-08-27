@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:jadwal_sholat_app/utils/prayer_time_formatter.dart';
 import 'package:jadwal_sholat_app/utils/prayer_calculation_utils.dart';
 import 'package:adhan/adhan.dart';
-import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:geocoding/geocoding.dart'
+    show placemarkFromCoordinates, Placemark;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:jadwal_sholat_app/screens/monthly_schedule_screen.dart';
@@ -36,7 +37,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     super.initState();
     _loadPrayerTimes();
     // check after first frame if adhan audio is playing
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowStopAdhanDialog());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _maybeShowStopAdhanDialog(),
+    );
   }
 
   @override
@@ -105,16 +108,26 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       try {
         final prefs = await SharedPreferences.getInstance();
         final placeName = _placemark != null
-            ? (_placemark!.subLocality?.isNotEmpty == true ? _placemark!.subLocality : _placemark!.locality)
+            ? (_placemark!.subLocality?.isNotEmpty == true
+                  ? _placemark!.subLocality
+                  : _placemark!.locality)
             : 'Lokasi tidak diketahui';
-        await prefs.setString('last_place_name', placeName ?? 'Lokasi tidak diketahui');
+        await prefs.setString(
+          'last_place_name',
+          placeName ?? 'Lokasi tidak diketahui',
+        );
         // next prayer info
         final nextPrayerEnum = _prayerTimes!.nextPrayer();
         final nextPrayerName = _prayerName(nextPrayerEnum);
         final nextPrayerTime = _prayerTimes!.timeForPrayer(nextPrayerEnum);
         if (nextPrayerTime != null) {
           await prefs.setString('next_prayer_name', nextPrayerName);
-          await prefs.setString('next_prayer_time', DateTime.now().isUtc ? nextPrayerTime.toIso8601String() : nextPrayerTime.toString().substring(11,16));
+          await prefs.setString(
+            'next_prayer_time',
+            DateTime.now().isUtc
+                ? nextPrayerTime.toIso8601String()
+                : nextPrayerTime.toString().substring(11, 16),
+          );
         }
       } catch (_) {
         // ignore prefs errors for widget
@@ -205,7 +218,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         return 'Subuh Berikutnya';
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -348,11 +360,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     // Prefer human-readable placemark parts when available
     if (_placemark != null) {
       final parts = <String>[];
-      if ((_placemark!.subLocality ?? '').isNotEmpty) parts.add(_placemark!.subLocality!);
-      if ((_placemark!.locality ?? '').isNotEmpty && !parts.contains(_placemark!.locality)) parts.add(_placemark!.locality!);
-      if ((_placemark!.subAdministrativeArea ?? '').isNotEmpty && !parts.contains(_placemark!.subAdministrativeArea)) parts.add(_placemark!.subAdministrativeArea!);
-      if ((_placemark!.administrativeArea ?? '').isNotEmpty && !parts.contains(_placemark!.administrativeArea)) parts.add(_placemark!.administrativeArea!);
-      if ((_placemark!.country ?? '').isNotEmpty) parts.add(_placemark!.country!);
+      if ((_placemark!.subLocality ?? '').isNotEmpty)
+        parts.add(_placemark!.subLocality!);
+      if ((_placemark!.locality ?? '').isNotEmpty &&
+          !parts.contains(_placemark!.locality))
+        parts.add(_placemark!.locality!);
+      if ((_placemark!.subAdministrativeArea ?? '').isNotEmpty &&
+          !parts.contains(_placemark!.subAdministrativeArea))
+        parts.add(_placemark!.subAdministrativeArea!);
+      if ((_placemark!.administrativeArea ?? '').isNotEmpty &&
+          !parts.contains(_placemark!.administrativeArea))
+        parts.add(_placemark!.administrativeArea!);
+      if ((_placemark!.country ?? '').isNotEmpty)
+        parts.add(_placemark!.country!);
 
       if (parts.isNotEmpty) return parts.join(', ');
     }
@@ -380,7 +400,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         builder: (context) {
           return AlertDialog(
             title: const Text('Audio Azan Sedang Diputar'),
-            content: const Text('Apakah Anda ingin menghentikan audio azan yang sedang diputar?'),
+            content: const Text(
+              'Apakah Anda ingin menghentikan audio azan yang sedang diputar?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),

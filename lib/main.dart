@@ -126,7 +126,9 @@ Future<void> main() async {
       await BackgroundServiceEnhanced.initializeEnhancedService();
       debugPrint('Enhanced background service initialized successfully');
     } catch (e, stackTrace) {
-      debugPrint('Warning: Enhanced background service failed to initialize: $e');
+      debugPrint(
+        'Warning: Enhanced background service failed to initialize: $e',
+      );
       await ErrorLogger.instance.logError(
         message: 'Enhanced background service initialization failed',
         error: e,
@@ -213,8 +215,8 @@ class JadwalSholatApp extends StatelessWidget {
           color: Color(0xFF4DB6AC),
         ),
       ),
-  navigatorObservers: [appRouteObserver],
-  home: const HomeScreen(),
+      navigatorObservers: [appRouteObserver],
+      home: const HomeScreen(),
     );
   }
 }
@@ -298,8 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-  Position? position;
-  List<Placemark> placemarks = [];
+      Position? position;
+      List<Placemark> placemarks = [];
 
       // Coba ambil dari cache terlebih dahulu
       final cachedLocation = await LocationCacheService.getCachedLocation();
@@ -374,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
           speed: position.speed,
           speedAccuracy: position.speedAccuracy,
         );
-  _placemark = placemarks.isNotEmpty ? placemarks[0] : null;
+        _placemark = placemarks.isNotEmpty ? placemarks[0] : null;
         _prayerTimes = prayerTimes;
         _isLoading = false;
       });
