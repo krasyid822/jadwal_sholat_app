@@ -20,6 +20,7 @@ import 'package:jadwal_sholat_app/utils/prayer_calculation_utils.dart';
 import 'package:jadwal_sholat_app/utils/prayer_time_formatter.dart';
 import 'package:jadwal_sholat_app/config/environment_config.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:jadwal_sholat_app/utils/route_observer.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -106,30 +107,35 @@ Future<void> main() async {
     );
   }
 
-  try {
-    await initializeBackgroundService();
-  } catch (e, stackTrace) {
-    // Log background service initialization error
-    await ErrorLogger.instance.logError(
-      message: 'Background service initialization failed',
-      error: e,
-      stackTrace: stackTrace,
-      context: 'main()',
-    );
-  }
+  // Background services are only supported on Android/iOS. Skip initialization on web.
+  if (!kIsWeb) {
+    try {
+      await initializeBackgroundService();
+    } catch (e, stackTrace) {
+      // Log background service initialization error
+      await ErrorLogger.instance.logError(
+        message: 'Background service initialization failed',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'main()',
+      );
+    }
 
-  // Initialize enhanced background service
-  try {
-    await BackgroundServiceEnhanced.initializeEnhancedService();
-    debugPrint('Enhanced background service initialized successfully');
-  } catch (e, stackTrace) {
-    debugPrint('Warning: Enhanced background service failed to initialize: $e');
-    await ErrorLogger.instance.logError(
-      message: 'Enhanced background service initialization failed',
-      error: e,
-      stackTrace: stackTrace,
-      context: 'main()',
-    );
+    // Initialize enhanced background service
+    try {
+      await BackgroundServiceEnhanced.initializeEnhancedService();
+      debugPrint('Enhanced background service initialized successfully');
+    } catch (e, stackTrace) {
+      debugPrint('Warning: Enhanced background service failed to initialize: $e');
+      await ErrorLogger.instance.logError(
+        message: 'Enhanced background service initialization failed',
+        error: e,
+        stackTrace: stackTrace,
+        context: 'main()',
+      );
+    }
+  } else {
+    debugPrint('Skipping background service initialization on web');
   }
 
   runApp(const JadwalSholatApp());
@@ -292,8 +298,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      Position? position;
-      List<Placemark>? placemarks;
+  Position? position;
+  List<Placemark> placemarks = [];
 
       // Coba ambil dari cache terlebih dahulu
       final cachedLocation = await LocationCacheService.getCachedLocation();
@@ -304,10 +310,20 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         // Jika tidak ada cache atau sudah kadaluarsa, ambil lokasi baru
         position = await LocationAccuracyService.getAccuratePosition();
-        placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
+        if (!kIsWeb) {
+          try {
+            placemarks = await placemarkFromCoordinates(
+              position.latitude,
+              position.longitude,
+            );
+          } catch (e) {
+            debugPrint('Geocoding failed on native platform: $e');
+            placemarks = [];
+          }
+        } else {
+          debugPrint('Skipping placemarkFromCoordinates on web');
+          placemarks = [];
+        }
 
         // Simpan ke cache
         if (placemarks.isNotEmpty) {
@@ -358,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
           speed: position.speed,
           speedAccuracy: position.speedAccuracy,
         );
-        _placemark = placemarks!.isNotEmpty ? placemarks[0] : null;
+  _placemark = placemarks.isNotEmpty ? placemarks[0] : null;
         _prayerTimes = prayerTimes;
         _isLoading = false;
       });

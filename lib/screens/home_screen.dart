@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:jadwal_sholat_app/utils/prayer_time_formatter.dart';
 import 'package:jadwal_sholat_app/utils/prayer_calculation_utils.dart';
 import 'package:adhan/adhan.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:jadwal_sholat_app/screens/monthly_schedule_screen.dart';
 import 'package:jadwal_sholat_app/screens/qibla_screen.dart';
@@ -65,10 +66,22 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
 
     try {
       final position = await LocationService.determinePosition();
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      List<Placemark> placemarks = [];
+      if (!kIsWeb) {
+        try {
+          placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+        } catch (e) {
+          debugPrint('Geocoding failed on native platform: $e');
+          placemarks = [];
+        }
+      } else {
+        // On web, geocoding via plugin may be unsupported. Leave placemarks empty
+        // so UI can fall back to coordinates or cached place name.
+        debugPrint('Skipping placemarkFromCoordinates on web');
+      }
 
       final myCoordinates = Coordinates(position.latitude, position.longitude);
 

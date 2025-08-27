@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:jadwal_sholat_app/screens/time_calibration_screen.dart';
 import 'package:jadwal_sholat_app/screens/report_issue_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,11 +42,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Implementasi logika untuk memulai atau menghentikan background service
     try {
-      final service = FlutterBackgroundService();
-      if (value) {
-        await service.startService();
+      if (!kIsWeb) {
+        final service = FlutterBackgroundService();
+        if (value) {
+          await service.startService();
+        } else {
+          service.invoke('stopService');
+        }
       } else {
-        service.invoke('stopService');
+        debugPrint('Background service not supported on web - skipping');
       }
     } catch (e) {
       // Handle error jika service tidak tersedia

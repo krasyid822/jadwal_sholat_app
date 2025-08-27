@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:flutter/foundation.dart';
+import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
 class LocationCacheService {
   static const String _cacheKeyPosition = 'cached_position';
@@ -214,14 +214,33 @@ Cached Location Summary:
         ),
       );
 
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      if (!kIsWeb) {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
 
-      if (placemarks.isNotEmpty) {
-        await cacheLocation(position: position, placemark: placemarks.first);
-        debugPrint('Cache force refreshed successfully');
+        if (placemarks.isNotEmpty) {
+          await cacheLocation(position: position, placemark: placemarks.first);
+          debugPrint('Cache force refreshed successfully');
+        }
+      } else {
+        // On web, placemarkFromCoordinates may not be supported. Cache only position
+        final dummyPlacemark = Placemark(
+          name: null,
+          street: null,
+          isoCountryCode: null,
+          country: null,
+          postalCode: null,
+          administrativeArea: null,
+          subAdministrativeArea: null,
+          locality: null,
+          subLocality: null,
+          thoroughfare: null,
+          subThoroughfare: null,
+        );
+        await cacheLocation(position: position, placemark: dummyPlacemark);
+        debugPrint('Cache force refreshed with position only on web');
       }
     } catch (e) {
       debugPrint('Error force refreshing cache: $e');

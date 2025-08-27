@@ -14,7 +14,11 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+  <!-- The base href must be absolute (start and end with '/'). Use '/' to
+    serve from the root. To serve from a subpath (for example GitHub Pages),
+    pass `--base-href=/your-repo-name/` to `flutter build web` and the
+    placeholder `$FLUTTER_BASE_HREF` will be replaced at build time. -->
+  <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">

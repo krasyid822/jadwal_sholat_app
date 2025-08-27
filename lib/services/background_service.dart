@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:geocoding/geocoding.dart' show placemarkFromCoordinates, Placemark;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
 
@@ -105,16 +106,18 @@ void onStart(ServiceInstance service) async {
         return;
       }
 
-      // Dapatkan placemark
-      List<Placemark> placemarks;
-      try {
-        placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-      } catch (e) {
-        debugPrint('Failed to get placemark: $e');
-        placemarks = [];
+      // Dapatkan placemark (skip on web)
+      List<Placemark> placemarks = [];
+      if (!kIsWeb) {
+        try {
+          placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+        } catch (e) {
+          debugPrint('Failed to get placemark: $e');
+          placemarks = [];
+        }
       }
 
       // Simpan ke cache
@@ -124,6 +127,23 @@ void onStart(ServiceInstance service) async {
           placemark: placemarks[0],
         );
         debugPrint('Location updated in background and cached');
+      } else if (kIsWeb) {
+        // On web, cache position only with a dummy placemark
+        final dummyPlacemark = Placemark(
+          name: null,
+          street: null,
+          isoCountryCode: null,
+          country: null,
+          postalCode: null,
+          administrativeArea: null,
+          subAdministrativeArea: null,
+          locality: null,
+          subLocality: null,
+          thoroughfare: null,
+          subThoroughfare: null,
+        );
+        await LocationCacheService.cacheLocation(position: position, placemark: dummyPlacemark);
+        debugPrint('Cached position only on web');
       }
 
       // Hitung ulang jadwal sholat
