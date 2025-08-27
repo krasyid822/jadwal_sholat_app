@@ -32,7 +32,7 @@ jobs:
       - name: Build web app in release mode
         run: |
           # Build dengan base-href yang tepat
-          flutter build web --release --base-href=/krasyid822.github.io/jadwal_sholat_app/
+          flutter build web --release --base-href=/jadwal_sholat_app/
           
       - name: Create .nojekyll file
         run: |
