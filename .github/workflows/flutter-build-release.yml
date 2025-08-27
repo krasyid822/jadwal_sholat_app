@@ -1,0 +1,86 @@
+name: Flutter Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: windows-latest # Using Windows runner to support all platforms
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.10.0'
+          channel: 'stable'
+      
+      - name: Install 7-Zip
+        shell: powershell
+        run: |
+          choco install 7zip.install -y
+          echo "7-Zip installed"
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Run tests
+        run: flutter test
+      
+      # Android builds
+      - name: Build APK for arm64-v8a
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+      
+      - name: Build APK for armeabi-v7a
+        run: flutter build apk --release --split-per-abi --target-platform android-arm
+      
+      - name: Build APK for x86_64
+        run: flutter build apk --release --split-per-abi --target-platform android-x64
+      
+      # Windows build
+      - name: Build Windows
+        run: flutter build windows --release
+      
+      - name: Create Windows 7z Archive
+        shell: powershell
+        run: |
+          7z a -r windows-build.7z build\windows\runner\Release\*
+          echo "Windows build compressed to windows-build.7z"
+      
+      # Web build
+      - name: Build Web
+        run: flutter build web --release
+      
+      - name: Create Web 7z Archive
+        shell: powershell
+        run: |
+          7z a -r web-build.7z build\web\*
+          echo "Web build compressed to web-build.7z"
+      
+      # Create Release and upload artifacts
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+            windows-build.7z
+            web-build.7z
