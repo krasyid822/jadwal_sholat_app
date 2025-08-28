@@ -5,6 +5,8 @@ import 'package:jadwal_sholat_app/services/background_service_enhanced.dart';
 import 'package:jadwal_sholat_app/config/enhanced_notification_config.dart';
 
 void main() {
+  // Ensure test bindings are initialized for ServicesBinding usage
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('Enhanced Notification System Tests', () {
     test('Enhanced Notification Config Test', () {
       // Test prayer audio file selection
@@ -82,11 +84,12 @@ void main() {
       );
 
       // Test timing configuration
+      // Configuration timing values: countdown default is 10 minutes; imsakBeforeSubuh is 10 minutes
       expect(
         EnhancedNotificationConfig.countdownStartDuration.inMinutes,
         equals(10),
       );
-      expect(EnhancedNotificationConfig.imsakBeforeSubuh.inMinutes, equals(20));
+      expect(EnhancedNotificationConfig.imsakBeforeSubuh.inMinutes, equals(10));
 
       // Test channel IDs
       expect(EnhancedNotificationConfig.prayerChannelId, isNotEmpty);

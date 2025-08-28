@@ -360,19 +360,24 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     // Prefer human-readable placemark parts when available
     if (_placemark != null) {
       final parts = <String>[];
-      if ((_placemark!.subLocality ?? '').isNotEmpty)
+      if ((_placemark!.subLocality ?? '').isNotEmpty) {
         parts.add(_placemark!.subLocality!);
+      }
       if ((_placemark!.locality ?? '').isNotEmpty &&
-          !parts.contains(_placemark!.locality))
+          !parts.contains(_placemark!.locality)) {
         parts.add(_placemark!.locality!);
+      }
       if ((_placemark!.subAdministrativeArea ?? '').isNotEmpty &&
-          !parts.contains(_placemark!.subAdministrativeArea))
+          !parts.contains(_placemark!.subAdministrativeArea)) {
         parts.add(_placemark!.subAdministrativeArea!);
+      }
       if ((_placemark!.administrativeArea ?? '').isNotEmpty &&
-          !parts.contains(_placemark!.administrativeArea))
+          !parts.contains(_placemark!.administrativeArea)) {
         parts.add(_placemark!.administrativeArea!);
-      if ((_placemark!.country ?? '').isNotEmpty)
+      }
+      if ((_placemark!.country ?? '').isNotEmpty) {
         parts.add(_placemark!.country!);
+      }
 
       if (parts.isNotEmpty) return parts.join(', ');
     }
