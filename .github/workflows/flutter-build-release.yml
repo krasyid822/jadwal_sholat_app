@@ -87,7 +87,7 @@ jobs:
           name: Build ${{ env.DATE }}-${{ env.SHORT_SHA }}
           tag_name: build-${{ env.DATE }}-${{ env.SHORT_SHA }}
           draft: false
-          prerelease: false
+          prerelease: true
           files: |
             build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
             build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
