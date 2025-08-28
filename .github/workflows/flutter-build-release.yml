@@ -5,6 +5,9 @@ on:
     branches:
       - main-new  # Triggers on every push to the main branch
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build and Release
@@ -13,6 +16,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v3
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
         
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -67,6 +78,14 @@ jobs:
         run: flutter build apk --release --split-per-abi --target-platform android-x64
       
       # Windows build
+      - name: Cache Windows Build Output
+        uses: actions/cache@v3
+        with:
+          path: build/windows
+          key: ${{ runner.os }}-windows-build-${{ env.SHORT_SHA }}
+          restore-keys: |
+            ${{ runner.os }}-windows-build-
+      
       - name: Build Windows
         run: flutter build windows --release
       
