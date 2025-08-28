@@ -62,13 +62,13 @@ jobs:
           
       - name: Update base href in index.html
         run: |
-          if [ -f "jadwal_sholat_app/index.html" ]; then
-            echo "Updating base href in jadwal_sholat_app/index.html"
-            sed -i 's|<base href="/">|<base href="https://krasyid822.github.io/jadwal_sholat_app/">|g' jadwal_sholat_app/index.html
+          if [ -f "docs/index.html" ]; then
+            echo "Updating base href in docs/index.html"
+            sed -i 's|<base href="/">|<base href="https://krasyid822.github.io/jadwal_sholat_app/">|g' docs/index.html
             echo "Base href updated successfully"
-            grep "<base href" jadwal_sholat_app/index.html
+            grep "<base href" docs/index.html
           else
-            echo "Error: jadwal_sholat_app/index.html does not exist"
+            echo "Error: docs/index.html does not exist"
             exit 1
           fi
       
