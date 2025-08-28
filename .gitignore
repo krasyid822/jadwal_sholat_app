@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Ignore generated documentation
+docs/
+docs/**
+
 # Symbolication related
 app.*.symbols
 
