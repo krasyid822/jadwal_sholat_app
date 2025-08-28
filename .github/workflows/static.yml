@@ -32,7 +32,7 @@ jobs:
       - name: Build web app in release mode
         run: |
           # Build dengan base-href yang tepat
-          flutter build web --release --base-href=/jadwal_sholat_app/
+          flutter build web --release
           
       - name: Create .nojekyll file
         run: |
@@ -60,6 +60,18 @@ jobs:
             exit 1
           fi
           
+      - name: Update base href in index.html
+        run: |
+          if [ -f "jadwal_sholat_app/index.html" ]; then
+            echo "Updating base href in jadwal_sholat_app/index.html"
+            sed -i 's|<base href="/">|<base href="https://krasyid822.github.io/jadwal_sholat_app/">|g' jadwal_sholat_app/index.html
+            echo "Base href updated successfully"
+            grep "<base href" jadwal_sholat_app/index.html
+          else
+            echo "Error: jadwal_sholat_app/index.html does not exist"
+            exit 1
+          fi
+      
       - name: Commit and push to main branch
         run: |
           git config --global user.name 'github-actions[bot]'
