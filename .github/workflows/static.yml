@@ -1,56 +1,82 @@
-name: Deploy static content to Pages
+name: Build Flutter Web to /docs folder
 
 on:
   push:
-    branches: ["main-new"]  # Changed from "main-new" to "main" branch
+    branches: ["main-new"]
   workflow_dispatch:
 
+# Menambahkan izin menulis ke konten repository
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Pastikan untuk checkout dengan token yang memiliki akses tulis
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Pastikan untuk mendapatkan seluruh history untuk commit
+          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
         
       - name: Build web app in release mode
-        run: flutter build web --release --base-href /jadwal_sholat_app/
-
-      - name: Check build output
         run: |
-          if [ ! -d build/web ]; then
-            echo "Web build output not found!"
+          # Build dengan base-href yang tepat
+          flutter build web --release
+          
+      - name: Create .nojekyll file
+        run: |
+          # Membuat file .nojekyll untuk mencegah pemrosesan Jekyll
+          touch build/web/.nojekyll
+          
+      - name: Prepare docs directory
+        run: |
+          # Hapus direktori docs jika ada
+          rm -rf docs
+          # Buat direktori docs dan pindahkan hasil build ke sana
+          mkdir -p docs
+          cp -r build/web/* docs/
+          # Salin juga file .nojekyll
+          cp build/web/.nojekyll docs/
+          
+      - name: Verify docs directory
+        run: |
+          echo "Files in docs directory:"
+          ls -la docs
+          
+          # Pastikan file-file penting ada
+          if [ ! -f docs/index.html ] || [ ! -f docs/main.dart.js ]; then
+            echo "Error: Critical files missing in docs directory!"
             exit 1
           fi
-          ls -la build/web
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'build/web'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          
+      - name: Update base href in index.html
+        run: |
+          if [ -f "docs/index.html" ]; then
+            echo "Updating base href in docs/index.html"
+            sed -i 's|<base href="/">|<base href="https://krasyid822.github.io/jadwal_sholat_app/">|g' docs/index.html
+            echo "Base href updated successfully"
+            grep "<base href" docs/index.html
+          else
+            echo "Error: docs/index.html does not exist"
+            exit 1
+          fi
+      
+      - name: Commit and push to main branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs
+          git commit -m "Update web app build in docs folder" || echo "No changes to commit"
+          git push origin HEAD:main-new
