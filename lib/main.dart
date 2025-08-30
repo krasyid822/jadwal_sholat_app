@@ -24,6 +24,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:jadwal_sholat_app/utils/route_observer.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+// App widget support removed: background Flutter entrypoint and widget
+// updater import were deleted per user request.
+
 /// Get local timezone name
 Future<String> _getLocalTimeZone() async {
   try {

@@ -10,29 +10,29 @@ import java.util.concurrent.TimeUnit
 object ServiceWatchdog {
     private const val REQUEST_CODE = 4201
 
+    /**
+     * Schedule an AlarmManager alarm that will send a broadcast to WatchdogReceiver.
+     * Using a broadcast reduces reliance on startService flags and lets the receiver
+     * explicitly start the foreground service in a way that's compatible across API levels.
+     */
     fun scheduleWatchdog(context: Context, intervalMinutes: Long = 10) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, PrayerNotificationService::class.java).apply {
-            action = "jadwalsholat.rasyid.action.WATCHDOG_RESTART"
+        val intent = Intent(context, WatchdogReceiver::class.java).apply {
+            action = "jadwalsholat.rasyid.action.WATCHDOG_BROADCAST"
         }
 
-        val createFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_MUTABLE
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         } else {
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT
         }
 
-        val pending = PendingIntent.getService(
-            context,
-            REQUEST_CODE,
-            intent,
-            createFlags
-        )
+        val pending = PendingIntent.getBroadcast(context, REQUEST_CODE, intent, flags)
 
-    // Allow override from SharedPreferences (key: watchdog_interval_minutes)
-    val prefs = context.getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
-    val configured = prefs.getLong("watchdog_interval_minutes", intervalMinutes)
-    val triggerAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(configured)
+        // Allow override from SharedPreferences (key: watchdog_interval_minutes)
+        val prefs = context.getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+        val configured = prefs.getLong("watchdog_interval_minutes", intervalMinutes)
+        val triggerAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(configured)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
@@ -43,16 +43,16 @@ object ServiceWatchdog {
 
     fun cancelWatchdog(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, PrayerNotificationService::class.java).apply {
-            action = "jadwalsholat.rasyid.action.WATCHDOG_RESTART"
+        val intent = Intent(context, WatchdogReceiver::class.java).apply {
+            action = "jadwalsholat.rasyid.action.WATCHDOG_BROADCAST"
         }
-        val noCreateFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_MUTABLE
         } else {
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_NO_CREATE
         }
 
-        val pending = PendingIntent.getService(context, REQUEST_CODE, intent, noCreateFlags)
+        val pending = PendingIntent.getBroadcast(context, REQUEST_CODE, intent, flags)
         pending?.let { alarmManager.cancel(it) }
     }
 }

@@ -91,15 +91,13 @@
             </intent-filter>
         </receiver>
 
-        <!-- App Widget provider for home screen widget -->
-        <receiver android:name="jadwalsholat.rasyid.PrayerWidgetProvider"
-                  android:label="Jadwal Sholat Widget"
-                  android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
-        </receiver>
+        <!-- Watchdog receiver to receive AlarmManager broadcasts and start the foreground service -->
+        <receiver
+            android:name="jadwalsholat.rasyid.WatchdogReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+    <!-- App widget support removed -->
         
         <!-- Notification service for background scheduling -->
         <receiver 
@@ -115,6 +113,16 @@
 
     <!-- Receiver for user Stop action to stop adzan playback -->
     <receiver android:exported="false" android:name=".StopAudioReceiver" />
+        
+        <!-- Receiver for when the user deletes/clears the foreground notification -->
+        <receiver
+            android:name="jadwalsholat.rasyid.NotificationDeletedReceiver"
+            android:exported="false" />
+        
+        <!-- Receiver to periodically clean app notifications to avoid buildup -->
+        <receiver
+            android:name="jadwalsholat.rasyid.NotificationCleanerReceiver"
+            android:exported="false" />
         
         <!-- Foreground service for prayer time monitoring -->
         <service

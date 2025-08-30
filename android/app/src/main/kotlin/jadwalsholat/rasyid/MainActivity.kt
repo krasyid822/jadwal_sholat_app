@@ -50,6 +50,15 @@ class MainActivity : FlutterActivity() {
                     PrayerNotificationService.stopService(this)
                     result.success("Foreground service stopped")
                 }
+                "scheduleNotificationCleaner" -> {
+                    val minutes = call.argument<Int>("minutes") ?: 10
+                    NotificationCleanerHelper.scheduleRepeating(this, minutes.toLong())
+                    result.success("Cleaner scheduled")
+                }
+                "cancelNotificationCleaner" -> {
+                    NotificationCleanerHelper.cancel(this)
+                    result.success("Cleaner cancelled")
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -125,6 +134,8 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+    // ...existing method channels above...
+
             // Health channel - Flutter reports heartbeat; native can query last heartbeat
             val HEALTH_CHANNEL = "jadwalsholat.rasyid/health"
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HEALTH_CHANNEL).setMethodCallHandler { call, result ->
@@ -146,6 +157,41 @@ class MainActivity : FlutterActivity() {
                             result.success(ts)
                         } catch (e: Exception) {
                             result.error("HEALTH_ERR", "Failed to read heartbeat: ${e.message}", null)
+                        }
+                    }
+                    "getBootReceivedTs" -> {
+                        try {
+                            val prefs = getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+                            val ts = prefs.getLong("boot_received_ts", 0L)
+                            result.success(ts)
+                        } catch (e: Exception) {
+                            result.error("HEALTH_ERR", "Failed to read boot ts: ${e.message}", null)
+                        }
+                    }
+                    "isBootReceiverTriggeredSinceBoot" -> {
+                        try {
+                            val prefs = getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+                            val bootTs = prefs.getLong("boot_received_ts", 0L)
+                            // Compute device boot start time = now - elapsedRealtime
+                            val now = System.currentTimeMillis()
+                            val uptime = android.os.SystemClock.elapsedRealtime()
+                            val bootStart = now - uptime
+                            val triggered = bootTs >= bootStart && bootTs != 0L
+                            result.success(triggered)
+                        } catch (e: Exception) {
+                            result.error("HEALTH_ERR", "Failed to check boot receiver: ${e.message}", null)
+                        }
+                    }
+                    "openAppSettings" -> {
+                        try {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            val uri = android.net.Uri.fromParts("package", packageName, null)
+                            intent.data = uri
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ACTIVITY_ERR", "Failed to open app settings: ${e.message}", null)
                         }
                     }
                     else -> result.notImplemented()

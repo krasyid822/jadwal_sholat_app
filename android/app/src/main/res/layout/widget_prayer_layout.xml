@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/widget_location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="-"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:ellipsize="end"
+        android:maxLines="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        android:layout_marginTop="6dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_subuh_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Subuh" android:textSize="12sp"/>
+            <TextView android:id="@+id/widget_subuh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textSize="12sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_dzuhur_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dzuhur" android:textSize="12sp"/>
+            <TextView android:id="@+id/widget_dzuhur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textSize="12sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:id="@+id/widget_ashar_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ashar" android:textSize="12sp"/>
+            <TextView android:id="@+id/widget_ashar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textSize="12sp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+
+        <TextView android:id="@+id/widget_maghrib_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Maghrib" android:textSize="12sp"/>
+        <TextView android:id="@+id/widget_maghrib" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="--:--" android:textSize="12sp"/>
+        <TextView android:id="@+id/widget_isya_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Isya" android:textSize="12sp"/>
+        <TextView android:id="@+id/widget_isya" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="--:--" android:textSize="12sp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_updated"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="updated"
+        android:textSize="10sp"
+        android:gravity="end"
+        android:layout_marginTop="6dp"/>
+
+</LinearLayout>

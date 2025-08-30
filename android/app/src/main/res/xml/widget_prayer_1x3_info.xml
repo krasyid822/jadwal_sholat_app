@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="200dp"
+    android:minWidth="294dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/widget_prayer_layout"
+    android:initialLayout="@layout/widget_prayer_1x3"
+    android:configure=""
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen">
+
+</appwidget-provider>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../services/notification_service.dart';
 import '../services/notification_service_enhanced.dart';
 import '../services/background_service_enhanced.dart';
@@ -24,7 +25,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _enableLocationCache = false;
   bool _enableElevationCache = false;
   bool _loopAdhanAudio = false;
+  bool _autoCleanNotifications = false;
+  int _autoCleanInterval = 10; // minutes
   bool _isLoading = false;
+  bool _bootReceiverTriggered = false;
 
   @override
   void initState() {
@@ -49,7 +53,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
       _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
       _loopAdhanAudio = prefs.getBool('loop_adhan_audio') ?? false;
+      _autoCleanNotifications =
+          prefs.getBool('auto_clean_notifications') ?? false;
+      _autoCleanInterval = prefs.getInt('auto_clean_interval_minutes') ?? 10;
+      // Check boot receiver status
+      _checkBootReceiver();
     });
+  }
+
+  Future<void> _checkBootReceiver() async {
+    try {
+      final channel = MethodChannel('jadwalsholat.rasyid/health');
+      final res = await channel.invokeMethod(
+        'isBootReceiverTriggeredSinceBoot',
+      );
+      if (res is bool) setState(() => _bootReceiverTriggered = res);
+    } catch (e) {
+      debugPrint('Boot receiver check failed: $e');
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -68,6 +89,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('enable_location_cache', _enableLocationCache);
     await prefs.setBool('enable_elevation_cache', _enableElevationCache);
     await prefs.setBool('loop_adhan_audio', _loopAdhanAudio);
+    await prefs.setBool('auto_clean_notifications', _autoCleanNotifications);
+    await prefs.setInt('auto_clean_interval_minutes', _autoCleanInterval);
   }
 
   Future<void> _testEnhancedNotification() async {
@@ -256,6 +279,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   SwitchListTile(
                     title: const Text(
+                      'Auto-clean Notifications',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Hapus notifikasi aplikasi setiap interval tertentu (default 10 menit)',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: _autoCleanNotifications,
+                    activeThumbColor: const Color(0xFF4DB6AC),
+                    onChanged: (value) async {
+                      setState(() => _autoCleanNotifications = value);
+                      await _saveSettings();
+                      try {
+                        final channel = MethodChannel(
+                          'jadwalsholat.rasyid/alarm',
+                        );
+                        if (value) {
+                          await channel.invokeMethod(
+                            'scheduleNotificationCleaner',
+                            {'minutes': _autoCleanInterval},
+                          );
+                        } else {
+                          await channel.invokeMethod(
+                            'cancelNotificationCleaner',
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint(
+                          'scheduleNotificationCleaner invoke failed: $e',
+                        );
+                      }
+                    },
+                  ),
+                  if (_autoCleanNotifications)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16.0,
+                        right: 16.0,
+                        bottom: 8.0,
+                      ),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Interval (menit)',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: _autoCleanInterval.toString(),
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                border: UnderlineInputBorder(),
+                                isDense: true,
+                              ),
+                              onChanged: (v) async {
+                                final parsed = int.tryParse(v) ?? 10;
+                                setState(() => _autoCleanInterval = parsed);
+                                await _saveSettings();
+                                try {
+                                  final channel = MethodChannel(
+                                    'jadwalsholat.rasyid/alarm',
+                                  );
+                                  await channel.invokeMethod(
+                                    'scheduleNotificationCleaner',
+                                    {'minutes': _autoCleanInterval},
+                                  );
+                                } catch (e) {
+                                  debugPrint(
+                                    'Failed to update notification cleaner interval: $e',
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SwitchListTile(
+                    title: const Text(
                       'Countdown Live',
                       style: TextStyle(color: Colors.white),
                     ),
@@ -285,6 +389,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       setState(() => _imsakNotifications = value);
                       _saveSettings();
                     },
+                  ),
+                ]),
+
+                const SizedBox(height: 16),
+
+                _buildSection('Startup & Boot', [
+                  ListTile(
+                    title: const Text(
+                      'Autostart after reboot',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      _bootReceiverTriggered
+                          ? 'Receiver verified: will schedule on boot'
+                          : 'Receiver not yet verified after last boot',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          final channel = MethodChannel(
+                            'jadwalsholat.rasyid/health',
+                          );
+                          await channel.invokeMethod('openAppSettings');
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Membuka pengaturan aplikasi...'),
+                              backgroundColor: Color(0xFF4DB6AC),
+                            ),
+                          );
+                        } catch (e) {
+                          debugPrint('Failed to open app settings: $e');
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Gagal membuka pengaturan: $e'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Open App Settings'),
+                    ),
                   ),
                 ]),
 

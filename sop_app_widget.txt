@@ -1,0 +1,102 @@
+Tentu, Rasyid. Kita akan buat **App Widget Flutter** yang menampilkan:
+
+- 🏙️ Nama lokasi (misalnya “Pekanbaru”)
+- 🕋 Lima waktu salat: Subuh, Dzuhur, Ashar, Maghrib, Isya
+
+Dan kita pastikan widget ini **tidak error saat dimuat**, baik karena lokasi gagal, waktu tidak tersedia, atau lifecycle widget yang tidak sinkron.
+
+---
+
+### 🧱 Struktur Solusi
+
+1. **Ambil lokasi pengguna** → `geolocator`
+2. **Hitung waktu salat** → `adhan_dart`
+3. **Tampilkan di widget** → `flutter_widgetkit` (untuk iOS) atau `glance` (untuk Android)
+4. **Handle error dan fallback** → default lokasi + waktu dummy
+
+---
+
+### 📦 Dependencies (pubspec.yaml)
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  geolocator: ^10.1.0
+  adhan_dart: ^2.0.0
+  intl: ^0.18.1
+  timezone: ^0.9.2
+  flutter_widgetkit: ^1.0.0 # iOS widget
+```
+
+---
+
+### 🧮 Fungsi Hitung Waktu Salat
+
+```dart
+import 'package:adhan_dart/adhan_dart.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+
+Future<Map<String, String>> getPrayerTimes() async {
+  try {
+    Position pos = await Geolocator.getCurrentPosition();
+    final coordinates = Coordinates(pos.latitude, pos.longitude);
+    final params = CalculationMethod.MuslimWorldLeague.getParameters();
+    final prayerTimes = PrayerTimes(coordinates, DateTime.now(), params);
+
+    final formatter = DateFormat.Hm(); // 24-hour format
+    return {
+      'Subuh': formatter.format(prayerTimes.fajr),
+      'Dzuhur': formatter.format(prayerTimes.dhuhr),
+      'Ashar': formatter.format(prayerTimes.asr),
+      'Maghrib': formatter.format(prayerTimes.maghrib),
+      'Isya': formatter.format(prayerTimes.isha),
+    };
+  } catch (e) {
+    return {
+      'Subuh': '--:--',
+      'Dzuhur': '--:--',
+      'Ashar': '--:--',
+      'Maghrib': '--:--',
+      'Isya': '--:--',
+    };
+  }
+}
+```
+
+---
+
+### 🧾 Widget Tampilan Jadwal
+
+```dart
+class PrayerWidget extends StatelessWidget {
+  final Map<String, String> times;
+  final String location;
+
+  PrayerWidget({required this.times, required this.location});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(location, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ...times.entries.map((entry) => Text('${entry.key}: ${entry.value}')),
+      ],
+    );
+  }
+}
+```
+
+---
+
+### 🛡️ Tips Anti-Error
+
+- Tambahkan fallback lokasi: `"Lokasi tidak tersedia"`
+- Bungkus semua async dengan `try-catch`
+- Gunakan `WidgetsBindingObserver` untuk refresh saat widget aktif kembali
+- Cache hasil terakhir agar widget tetap tampil meski offline
+
+---
+
+Kalau kamu mau, aku bisa bantu buatkan versi modular yang bisa kamu integrasikan langsung ke `glance` (Android widget) atau `flutter_widgetkit` (iOS). Mau kita lanjut ke integrasi widget platform?

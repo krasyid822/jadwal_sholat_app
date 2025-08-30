@@ -3,11 +3,13 @@ package jadwalsholat.rasyid
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.app.PendingIntent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlin.math.abs
+import java.util.concurrent.TimeUnit
 
 class PrayerNotificationService : Service() {
     
@@ -33,7 +35,7 @@ class PrayerNotificationService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createForegroundNotification())
+    startForeground(NOTIFICATION_ID, createForegroundNotification())
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,6 +64,32 @@ class PrayerNotificationService : Service() {
 
         // Return START_STICKY to request restart if killed
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // When the app task is removed (e.g., user swipes app from recent), schedule an
+        // immediate one-shot WorkManager job to ensure the service is restarted.
+        try {
+            val work = androidx.work.OneTimeWorkRequestBuilder<ServiceRestartWorker>()
+                .setInitialDelay(2, TimeUnit.SECONDS)
+                .build()
+            androidx.work.WorkManager.getInstance(this).enqueue(work)
+        } catch (e: Exception) {
+            android.util.Log.w("PrayerService", "Failed to enqueue restart worker onTaskRemoved: ${e.message}")
+            // Fallback: try to directly start the foreground service
+            try {
+                val intent = Intent(this, PrayerNotificationService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+            } catch (ex: Exception) {
+                android.util.Log.w("PrayerService", "Fallback startService failed: ${ex.message}")
+            }
+        }
+
+        super.onTaskRemoved(rootIntent)
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
@@ -98,6 +126,16 @@ class PrayerNotificationService : Service() {
     }
     
     private fun createForegroundNotification(): Notification {
+        // Attach a deleteIntent so that if the notification is removed the receiver
+        // can enqueue a WorkManager task to restart the service (survives process death).
+        val deleteIntent = Intent(this, NotificationDeletedReceiver::class.java)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_MUTABLE
+        } else {
+            PendingIntent.FLAG_IMMUTABLE
+        }
+        val deletePending = PendingIntent.getBroadcast(this, 1002, deleteIntent, flags)
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Prayer Time Service")
             .setContentText("Monitoring prayer times in background")
@@ -105,6 +143,7 @@ class PrayerNotificationService : Service() {
             .setOngoing(true)
             .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setDeleteIntent(deletePending)
             .build()
     }
     

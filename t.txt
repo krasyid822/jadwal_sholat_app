@@ -1,0 +1,29 @@
+flutter build apk --release
+flutter run --release
+build/app/outputs/flutter-apk/
+
+Flutter run key commands.
+r Hot reload.
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+"compass sensor is unreliable, device calibration is needed."
+jangan gunakan mock, beri mekanisme otomatis saat device belum ready
+
+perbarui... untuk menggunakan..
+
+  flutter_launcher_icons: ^0.13.1
+
+[pubspec.yaml]
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/logo/lte-lock.png"
+  min_sdk_android: 21
+
+flutter pub run flutter_launcher_icons:main
+
+flutter pub upgrade --major-versions
