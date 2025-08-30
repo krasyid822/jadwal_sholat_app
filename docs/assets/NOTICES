@@ -3447,6 +3447,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 dbus
+geoclue
+gsettings
 
 Mozilla Public License Version 2.0
 ==================================
@@ -7093,6 +7095,7 @@ geocoding_platform_interface
 geolocator
 geolocator_android
 geolocator_apple
+geolocator_linux
 geolocator_platform_interface
 geolocator_web
 geolocator_windows
