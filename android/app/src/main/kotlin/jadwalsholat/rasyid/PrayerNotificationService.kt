@@ -14,8 +14,10 @@ import java.util.concurrent.TimeUnit
 class PrayerNotificationService : Service() {
     
     companion object {
-        private const val NOTIFICATION_ID = 1001
-        private const val CHANNEL_ID = "prayer_foreground_service"
+    // Use same ID as Flutter enhanced foreground service to keep them in sync
+    private const val NOTIFICATION_ID = 4000
+    // Channel id must match Flutter's _foregroundWidgetChannelId
+    private const val CHANNEL_ID = "foreground_widget_channel"
         
         fun startService(context: Context) {
             val intent = Intent(context, PrayerNotificationService::class.java)
@@ -113,10 +115,10 @@ class PrayerNotificationService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Prayer Time Background Service",
+                "Panel Jadwal Sholat (Latar Depan)",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps prayer time notifications running in background"
+                description = "Panel notifikasi persistent yang menampilkan nama lokasi dan 5 waktu sholat"
                 setShowBadge(false)
             }
             
@@ -136,15 +138,82 @@ class PrayerNotificationService : Service() {
         }
         val deletePending = PendingIntent.getBroadcast(this, 1002, deleteIntent, flags)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Prayer Time Service")
-            .setContentText("Monitoring prayer times in background")
+        // Build an inbox style notification from SharedPreferences
+        val prefs = getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+        val place = prefs.getString("last_place_name", "") ?: ""
+
+        val prayerKeys = listOf("subuh", "dzuhur", "ashar", "maghrib", "isya")
+        val inboxStyle = NotificationCompat.InboxStyle()
+
+        fun emojiFor(key: String): String {
+            return when (key) {
+                "subuh" -> "🕯️"
+                "dzuhur" -> "🌞"
+                "ashar" -> "🌤️"
+                "maghrib" -> "🌇"
+                "isya" -> "🌙"
+                else -> "•"
+            }
+        }
+
+        for (key in prayerKeys) {
+            val stored = prefs.getString("prayer_time_$key", "") ?: ""
+            val display = if (stored.length >= 16) {
+                try {
+                    stored.substring(11, 16)
+                } catch (e: Exception) {
+                    stored
+                }
+            } else if (stored.isNotEmpty()) {
+                stored
+            } else {
+                "--:--"
+            }
+            val displayName = key.replaceFirstChar { it.uppercaseChar() }
+            val emoji = emojiFor(key)
+            inboxStyle.addLine("$emoji  $displayName  $display")
+        }
+
+        val contentTitle = if (place.isNotEmpty()) place else "Panel Jadwal Sholat"
+
+        // If user enabled auto-expand, use a higher priority to increase
+        // the likelihood the system shows the expanded inbox style immediately.
+        val autoExpand = prefs.getBoolean("foreground_widget_auto_expand", false)
+        val priority = if (autoExpand) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(contentTitle)
+            .setStyle(inboxStyle)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .setShowWhen(false)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(priority)
             .setDeleteIntent(deletePending)
-            .build()
+
+        // Try to set a large icon and accent color from application icon in a
+        // safe way (handle bitmap, vector and adaptive icons).
+        try {
+            val appIconDrawable = try {
+                packageManager.getApplicationIcon(packageName)
+            } catch (e: Exception) {
+                null
+            }
+
+            if (appIconDrawable != null) {
+                val width = if (appIconDrawable.intrinsicWidth > 0) appIconDrawable.intrinsicWidth else 128
+                val height = if (appIconDrawable.intrinsicHeight > 0) appIconDrawable.intrinsicHeight else 128
+                val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                appIconDrawable.setBounds(0, 0, canvas.width, canvas.height)
+                appIconDrawable.draw(canvas)
+                builder.setLargeIcon(bmp)
+                builder.color = android.graphics.Color.parseColor("#4DB6AC")
+            }
+        } catch (e: Exception) {
+            // Ignore issues converting drawable to bitmap; fallback to no large icon
+        }
+
+        return builder.build()
     }
     
     private fun checkPrayerTimes() {

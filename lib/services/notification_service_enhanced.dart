@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 import 'package:adhan/adhan.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
@@ -9,6 +10,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
 import 'package:jadwal_sholat_app/services/error_logger.dart';
 import 'package:jadwal_sholat_app/services/audio_permission_service.dart';
+import 'package:jadwal_sholat_app/services/location_cache_service.dart';
 
 class NotificationServiceEnhanced {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -27,6 +29,8 @@ class NotificationServiceEnhanced {
   static const String _countdownChannelId = 'countdown_enhanced_channel';
   static const String _imsakChannelId = 'imsak_channel';
   static const String _foregroundChannelId = 'foreground_service_channel';
+  // Channel khusus untuk foreground widget jadwal sholat
+  static const String _foregroundWidgetChannelId = 'foreground_widget_channel';
 
   // Timer untuk countdown live
   static Timer? _countdownTimer;
@@ -227,6 +231,19 @@ class NotificationServiceEnhanced {
         playSound: false,
       );
 
+      // Channel untuk foreground widget jadwal (terpisah agar pengguna dapat
+      // mengatur atau menonaktifkannya tanpa mempengaruhi channel lain)
+      final widgetChannel = AndroidNotificationChannel(
+        _foregroundWidgetChannelId,
+        'Panel Jadwal Sholat (Latar Depan)',
+        description:
+            'Panel notifikasi persistent yang menampilkan nama lokasi dan 5 waktu sholat.',
+        importance: Importance.low,
+        enableVibration: false,
+        showBadge: false,
+        playSound: false,
+      );
+
       final androidPlugin = _notificationsPlugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
@@ -238,11 +255,13 @@ class NotificationServiceEnhanced {
         await androidPlugin?.createNotificationChannel(countdownChannel);
         await androidPlugin?.createNotificationChannel(imsakChannel);
         await androidPlugin?.createNotificationChannel(foregroundChannel);
+        await androidPlugin?.createNotificationChannel(widgetChannel);
       } else {
         await androidPlugin?.createNotificationChannel(prayerChannel);
         await androidPlugin?.createNotificationChannel(countdownChannel);
         await androidPlugin?.createNotificationChannel(imsakChannel);
         await androidPlugin?.createNotificationChannel(foregroundChannel);
+        await androidPlugin?.createNotificationChannel(widgetChannel);
       }
 
       debugPrint('Enhanced notification channels created');
@@ -425,6 +444,19 @@ class NotificationServiceEnhanced {
       debugPrint(
         'Prayer times saved to preferences for auto-play functionality',
       );
+      // Also persist into native SharedPreferences file so native foreground
+      // service (PrayerNotificationService) can read the times directly.
+      try {
+        final channel = MethodChannel('jadwalsholat.rasyid/alarm');
+        final Map<String, String> nativeMap = {};
+        for (final entry in prayerTimes.entries) {
+          final k = 'prayer_time_${entry.key.toLowerCase()}';
+          nativeMap[k] = entry.value.toIso8601String();
+        }
+        await channel.invokeMethod('persistPrayerTimes', nativeMap);
+      } catch (e) {
+        debugPrint('Failed to persist prayer times to native prefs: $e');
+      }
     } catch (e) {
       debugPrint('Error saving prayer times to preferences: $e');
     }
@@ -897,26 +929,12 @@ class NotificationServiceEnhanced {
   /// Show foreground service notification
   static Future<void> showForegroundServiceNotification() async {
     try {
+      final details = await _buildForegroundNotificationDetails();
       await _notificationsPlugin.show(
         _foregroundServiceId,
-        'Layanan Sholat Aktif',
-        'Notifikasi sholat dan countdown berjalan di latar belakang',
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            _foregroundChannelId,
-            'Layanan Latar Belakang Sholat',
-            channelDescription:
-                'Layanan untuk menjaga notifikasi sholat tetap berjalan.',
-            importance: Importance.low,
-            priority: Priority.low,
-            enableVibration: false,
-            playSound: false,
-            icon: '@mipmap/ic_launcher',
-            autoCancel: false,
-            ongoing: true,
-            showProgress: false,
-          ),
-        ),
+        null,
+        null,
+        details,
       );
 
       debugPrint('Foreground service notification shown');
@@ -928,30 +946,159 @@ class NotificationServiceEnhanced {
   /// Update foreground service notification dengan status
   static Future<void> updateForegroundServiceNotification(String status) async {
     try {
+      final details = await _buildForegroundNotificationDetails(status);
       await _notificationsPlugin.show(
         _foregroundServiceId,
-        'Layanan Sholat Aktif',
-        status,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            _foregroundChannelId,
-            'Layanan Latar Belakang Sholat',
-            channelDescription:
-                'Layanan untuk menjaga notifikasi sholat tetap berjalan.',
-            importance: Importance.low,
-            priority: Priority.low,
-            enableVibration: false,
-            playSound: false,
-            icon: '@mipmap/ic_launcher',
-            autoCancel: false,
-            ongoing: true,
-            showProgress: false,
-          ),
-        ),
+        null,
+        null,
+        details,
       );
     } catch (e) {
       debugPrint('Error updating foreground service notification: $e');
     }
+  }
+
+  /// Build NotificationDetails for the foreground service showing place name
+  /// and five prayer times (Inbox style). Reads saved prefs and falls back
+  /// to placeholders if not available.
+  static Future<NotificationDetails> _buildForegroundNotificationDetails([
+    String? summary,
+  ]) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check if user enabled the foreground widget panel
+    final enabled = prefs.getBool('enable_foreground_widget') ?? true;
+    if (!enabled) {
+      // Return a minimal details with the regular foreground channel so that
+      // callers can still call show/update but the widget will not be visible.
+      return NotificationDetails(
+        android: AndroidNotificationDetails(
+          _foregroundChannelId,
+          'Layanan Latar Belakang Sholat',
+          channelDescription:
+              'Layanan untuk menjaga notifikasi sholat tetap berjalan.',
+          importance: Importance.low,
+          priority: Priority.low,
+        ),
+      );
+    }
+
+    // Prefer the cached placemark if available (more reliable than naive fallback)
+    String? placeName;
+    try {
+      final cached = await LocationCacheService.getCachedLocation();
+      if (cached != null) {
+        final placemark = cached['placemark'];
+        placeName =
+            (placemark?.subLocality != null && placemark.subLocality.isNotEmpty)
+            ? placemark.subLocality
+            : (placemark?.locality ?? '');
+      }
+    } catch (_) {
+      placeName = null;
+    }
+
+    // If cache not available, fall back to last_place_name saved by HomeScreen.
+    if (placeName == null || placeName.isEmpty) {
+      placeName = prefs.getString('last_place_name') ?? '';
+    }
+
+    // If still empty, don't show widget (prevent 'Lokasi tidak diketahui' fallback)
+    if (placeName.isEmpty) {
+      return NotificationDetails(
+        android: AndroidNotificationDetails(
+          _foregroundChannelId,
+          'Layanan Latar Belakang Sholat',
+          channelDescription:
+              'Layanan untuk menjaga notifikasi sholat tetap berjalan.',
+          importance: Importance.low,
+          priority: Priority.low,
+        ),
+      );
+    }
+
+    // Prayer keys are saved as ISO strings in _savePrayerTimesToPrefs
+    final prayerKeys = ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+    final List<String> lines = [];
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+
+    // Map keys to small emojis for a friendlier UI
+    String emojiFor(String key) {
+      switch (key) {
+        case 'subuh':
+          return '🕯️';
+        case 'dzuhur':
+          return '🌞';
+        case 'ashar':
+          return '🌤️';
+        case 'maghrib':
+          return '🌇';
+        case 'isya':
+          return '🌙';
+        default:
+          return '•';
+      }
+    }
+
+    for (final key in prayerKeys) {
+      final stored = prefs.getString('prayer_time_$key');
+      String display;
+      if (stored != null) {
+        try {
+          final dt = DateTime.parse(stored);
+          display = '${twoDigits(dt.hour)}:${twoDigits(dt.minute)}';
+        } catch (_) {
+          // If parsing fails, try to use substring as fallback
+          display = stored.length >= 16
+              ? stored.substring(11, 16)
+              : (stored.isNotEmpty ? stored : '--:--');
+        }
+      } else {
+        display = '--:--';
+      }
+
+      // Capitalize prayer name for display and add emoji for flair
+      final displayName = key[0].toUpperCase() + key.substring(1);
+      final emoji = emojiFor(key);
+      // Use a consistent two-column look: emoji + prayer + time
+      lines.add('$emoji  $displayName  $display');
+    }
+
+    // Create a slightly richer Android notification style: color, large icon,
+    // and colorized where supported. Keep it non-intrusive by default but
+    // allow auto-expand to bump importance.
+    final styledLines = lines;
+
+    final androidDetails = AndroidNotificationDetails(
+      _foregroundWidgetChannelId,
+      'Panel Jadwal Sholat (Latar Depan)',
+      channelDescription:
+          'Panel notifikasi persistent yang menampilkan nama lokasi dan 5 waktu sholat.',
+      importance: (prefs.getBool('foreground_widget_auto_expand') ?? false)
+          ? Importance.high
+          : Importance.low,
+      priority: (prefs.getBool('foreground_widget_auto_expand') ?? false)
+          ? Priority.high
+          : Priority.low,
+      enableVibration: false,
+      playSound: false,
+      icon: '@mipmap/ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      color: const Color(0xFF4DB6AC),
+      colorized: true,
+      autoCancel: false,
+      ongoing: true,
+      onlyAlertOnce: true,
+      showProgress: false,
+      styleInformation: InboxStyleInformation(
+        styledLines,
+        contentTitle: placeName,
+        summaryText: summary ?? 'Jadwal sholat hari ini',
+      ),
+    );
+
+    return NotificationDetails(android: androidDetails);
   }
 
   /// Hide foreground service notification

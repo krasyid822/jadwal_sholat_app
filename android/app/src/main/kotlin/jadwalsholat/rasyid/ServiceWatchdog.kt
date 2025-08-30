@@ -15,7 +15,7 @@ object ServiceWatchdog {
      * Using a broadcast reduces reliance on startService flags and lets the receiver
      * explicitly start the foreground service in a way that's compatible across API levels.
      */
-    fun scheduleWatchdog(context: Context, intervalMinutes: Long = 10) {
+    fun scheduleWatchdog(context: Context, intervalMinutes: Long = 1) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, WatchdogReceiver::class.java).apply {
             action = "jadwalsholat.rasyid.action.WATCHDOG_BROADCAST"
@@ -32,12 +32,21 @@ object ServiceWatchdog {
         // Allow override from SharedPreferences (key: watchdog_interval_minutes)
         val prefs = context.getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
         val configured = prefs.getLong("watchdog_interval_minutes", intervalMinutes)
-        val triggerAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(configured)
+        val intervalMillis = TimeUnit.MINUTES.toMillis(configured)
+        val triggerAt = System.currentTimeMillis() + intervalMillis
 
+        // Schedule first exact run then attempt to set a repeating alarm as a fallback.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
         } else {
             alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+        }
+
+        try {
+            // setRepeating may be inexact on modern Android but provides a regular tick
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, triggerAt, intervalMillis, pending)
+        } catch (_: Exception) {
+            // Ignore OEM restrictions; rely on exact one-shots in that case
         }
     }
 

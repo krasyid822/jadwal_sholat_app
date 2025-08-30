@@ -55,6 +55,40 @@ class MainActivity : FlutterActivity() {
                     NotificationCleanerHelper.scheduleRepeating(this, minutes.toLong())
                     result.success("Cleaner scheduled")
                 }
+                "setWatchdogInterval" -> {
+                    val minutes = call.argument<Int>("minutes") ?: 1
+                    try {
+                        val prefs = getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+                        prefs.edit().putLong("watchdog_interval_minutes", minutes.toLong()).apply()
+                        // Reschedule watchdog with new interval
+                        ServiceWatchdog.scheduleWatchdog(this, minutes.toLong())
+                        result.success("Watchdog interval set")
+                    } catch (e: Exception) {
+                        result.error("WATCHDOG_ERR", "Failed to set watchdog interval: ${e.message}", null)
+                    }
+                }
+                    "persistPrayerTimes" -> {
+                        try {
+                            val args = call.arguments as? Map<String, String>
+                            val prefs = getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)
+                            val editor = prefs.edit()
+                            if (args != null) {
+                                for ((k, v) in args) {
+                                    editor.putString(k, v)
+                                }
+                            }
+                            editor.apply()
+                            // Ensure native foreground service reads the new times immediately
+                            try {
+                                PrayerNotificationService.startService(this)
+                            } catch (e: Exception) {
+                                // best-effort; ignore failures here
+                            }
+                            result.success("persisted")
+                        } catch (e: Exception) {
+                            result.error("PERSIST_ERR", "Failed to persist prayer times: ${e.message}", null)
+                        }
+                    }
                 "cancelNotificationCleaner" -> {
                     NotificationCleanerHelper.cancel(this)
                     result.success("Cleaner cancelled")

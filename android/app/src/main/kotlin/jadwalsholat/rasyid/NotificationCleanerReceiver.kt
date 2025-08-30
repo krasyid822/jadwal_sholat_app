@@ -6,6 +6,7 @@ import android.content.Intent
 import android.app.NotificationManager
 import android.util.Log
 import android.content.SharedPreferences
+import android.os.Build
 import java.util.concurrent.TimeUnit
 
 class NotificationCleanerReceiver : BroadcastReceiver() {
@@ -14,6 +15,18 @@ class NotificationCleanerReceiver : BroadcastReceiver() {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancelAll()
             Log.i("NotificationCleaner", "Canceled all notifications on trigger")
+            // Restart the foreground service to re-create the persistent panel
+            try {
+                val intent = Intent(context, PrayerNotificationService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                Log.i("NotificationCleaner", "Restarted PrayerNotificationService after cleaner")
+            } catch (e: Exception) {
+                Log.w("NotificationCleaner", "Failed to restart service: ${e.message}")
+            }
             // Try to reschedule next run based on saved preferences
             try {
                 val prefs = context.getSharedPreferences("jadwalsholat_prefs", Context.MODE_PRIVATE)

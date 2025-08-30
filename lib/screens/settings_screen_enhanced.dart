@@ -22,8 +22,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoPlayAdhanAudio = true; // New: Auto-play adhan audio
   bool _useNativeRingtonePlayback = true;
   bool _enableWatchdogRestart = true;
+  int _watchdogInterval = 1; // minutes, default 1
   bool _enableLocationCache = false;
   bool _enableElevationCache = false;
+  bool _enableForegroundWidget = true;
+  bool _autoExpandForegroundWidget = false;
   bool _loopAdhanAudio = false;
   bool _autoCleanNotifications = false;
   int _autoCleanInterval = 10; // minutes
@@ -39,6 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      _autoExpandForegroundWidget =
+          prefs.getBool('foreground_widget_auto_expand') ?? false;
       _prayerNotifications = prefs.getBool('prayer_notifications') ?? true;
       _countdownNotifications =
           prefs.getBool('countdown_notifications') ?? true;
@@ -50,8 +55,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback =
           prefs.getBool('use_native_ringtone_playback') ?? true;
       _enableWatchdogRestart = prefs.getBool('enable_watchdog_restart') ?? true;
+      _watchdogInterval = prefs.getInt('watchdog_interval_minutes') ?? 1;
       _enableLocationCache = prefs.getBool('enable_location_cache') ?? false;
       _enableElevationCache = prefs.getBool('enable_elevation_cache') ?? false;
+      _enableForegroundWidget =
+          prefs.getBool('enable_foreground_widget') ?? true;
       _loopAdhanAudio = prefs.getBool('loop_adhan_audio') ?? false;
       _autoCleanNotifications =
           prefs.getBool('auto_clean_notifications') ?? false;
@@ -86,8 +94,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _useNativeRingtonePlayback,
     );
     await prefs.setBool('enable_watchdog_restart', _enableWatchdogRestart);
+    await prefs.setInt('watchdog_interval_minutes', _watchdogInterval);
     await prefs.setBool('enable_location_cache', _enableLocationCache);
     await prefs.setBool('enable_elevation_cache', _enableElevationCache);
+    await prefs.setBool('enable_foreground_widget', _enableForegroundWidget);
+    await prefs.setBool(
+      'foreground_widget_auto_expand',
+      _autoExpandForegroundWidget,
+    );
     await prefs.setBool('loop_adhan_audio', _loopAdhanAudio);
     await prefs.setBool('auto_clean_notifications', _autoCleanNotifications);
     await prefs.setInt('auto_clean_interval_minutes', _autoCleanInterval);
@@ -374,6 +388,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _saveSettings();
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.view_agenda,
+                      color: Color(0xFF4DB6AC),
+                    ),
+                    title: const Text(
+                      'Auto-expand Panel Jadwal',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Jika aktif, panel notifikasi akan mencoba tampil terluas secara otomatis (dapat mempengaruhi tampilan sistem).',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.info_outline,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            final snack = SnackBar(
+                              content: const Text(
+                                'Auto-expand bergantung pada perilaku OEM. Pin notifikasi dan kecualikan aplikasi dari optimisasi baterai untuk hasil terbaik.',
+                              ),
+                              action: SnackBarAction(
+                                label: 'Buka Pengaturan',
+                                onPressed: () async {
+                                  try {
+                                    const channel = MethodChannel(
+                                      'jadwalsholat.rasyid/health',
+                                    );
+                                    await channel.invokeMethod(
+                                      'openAppSettings',
+                                    );
+                                  } catch (e) {
+                                    debugPrint('openAppSettings failed: $e');
+                                  }
+                                },
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(snack);
+                          },
+                        ),
+                      ],
+                    ),
+                    trailing: Switch(
+                      value: _autoExpandForegroundWidget,
+                      activeThumbColor: const Color(0xFF4DB6AC),
+                      onChanged: (value) async {
+                        setState(() => _autoExpandForegroundWidget = value);
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool(
+                          'foreground_widget_auto_expand',
+                          value,
+                        );
+                        // Inform native side to reschedule/refresh notification
+                        try {
+                          final channel = MethodChannel(
+                            'jadwalsholat.rasyid/alarm',
+                          );
+                          await channel.invokeMethod('setWatchdogInterval', {
+                            'minutes': _watchdogInterval,
+                          });
+                          // restart native service to pick up new preference
+                          await channel.invokeMethod('startForegroundService');
+                        } catch (e) {
+                          debugPrint(
+                            'Failed to notify native about auto-expand change: $e',
+                          );
+                        }
+                      },
+                    ),
+                  ),
                   SwitchListTile(
                     title: const Text(
                       'Notifikasi Imsak',
@@ -536,6 +626,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   SwitchListTile(
                     title: const Text(
+                      'Panel Jadwal di Notifikasi (Foreground)',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Tampilkan panel jadwal sholat yang persistent di area notifikasi. Anda bisa mematikannya dari sini.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    value: _enableForegroundWidget,
+                    activeThumbColor: const Color(0xFF4DB6AC),
+                    onChanged: (value) {
+                      setState(() => _enableForegroundWidget = value);
+                      _saveSettings();
+                      // If user disables while service running, update notification
+                      if (_enhancedServiceEnabled && !value) {
+                        BackgroundServiceEnhanced.restartEnhancedService();
+                      }
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text(
                       'Loop Audio Azan',
                       style: TextStyle(color: Colors.white),
                     ),
@@ -577,6 +687,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+                  if (_enableWatchdogRestart)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16.0,
+                        right: 16.0,
+                        bottom: 8.0,
+                      ),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Interval watchdog (menit)',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: _watchdogInterval.toString(),
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                border: UnderlineInputBorder(),
+                                isDense: true,
+                              ),
+                              onChanged: (v) async {
+                                final parsed = int.tryParse(v) ?? 1;
+                                setState(
+                                  () => _watchdogInterval = parsed.clamp(1, 60),
+                                );
+                                await _saveSettings();
+                                try {
+                                  final channel = MethodChannel(
+                                    'jadwalsholat.rasyid/alarm',
+                                  );
+                                  await channel.invokeMethod(
+                                    'setWatchdogInterval',
+                                    {'minutes': _watchdogInterval},
+                                  );
+                                } catch (e) {
+                                  debugPrint(
+                                    'Failed to set native watchdog interval: $e',
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_enableWatchdogRestart)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      child: Text(
+                        'Perhatian: Interval watchdog 1 menit dapat meningkatkan konsumsi baterai. Gunakan dengan bijak.',
+                        style: const TextStyle(color: Colors.orangeAccent),
+                      ),
+                    ),
                 ]),
 
                 const SizedBox(height: 16),
@@ -652,6 +821,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'Exact Alarm',
                     subtitle: 'Berikan permission untuk exact alarm scheduling',
                   ),
+                  // removed full dialog action tile; inline help is next to Auto-expand switch
                 ]),
               ],
             ),
@@ -707,4 +877,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey)),
     );
   }
+
+  // Inline help replaced dialog; use SnackBar in-place to inform users.
 }
